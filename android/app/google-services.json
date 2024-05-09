@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1023790977092",
+    "project_id": "psc-4fbce",
+    "storage_bucket": "psc-4fbce.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1023790977092:android:8f7f5733932fca2c84ec11",
+        "android_client_info": {
+          "package_name": "com.example.psc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsp1N1mGwdibd8egfhxgUSE2WnWiktlGQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
