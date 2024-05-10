@@ -37,6 +37,10 @@ dependencies:
   cupertino_icons: ^1.0.6
   flutter_zoom_sdk: ^1.1.0+4
 
+  file_picker: ^8.0.3
+  open_file: ^3.3.2
+  firebase_storage: ^11.7.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
