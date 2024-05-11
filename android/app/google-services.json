@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:1023790977092:android:8f7f5733932fca2c84ec11",
         "android_client_info": {
-          "package_name": "com.example.psc"
+          "package_name": "psc.tuition.education"
         }
       },
       "oauth_client": [],
