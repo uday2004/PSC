@@ -3,46 +3,26 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
-class Piyush_Assignment extends StatefulWidget {
-  const Piyush_Assignment({super.key});
+class PiyushAssignment extends StatefulWidget {
+  const PiyushAssignment({super.key});
 
   @override
-  State<Piyush_Assignment> createState() => _Piyush_AssignmentState();
+  State<PiyushAssignment> createState() => _PiyushAssignmentState();
 }
 
-class _Piyush_AssignmentState extends State<Piyush_Assignment> {
-
+class _PiyushAssignmentState extends State<PiyushAssignment> {
   TextEditingController courseController = TextEditingController();
-  String dropdownvalue = list.first;
-
+  String dropdownValue = list.first;
   static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
+  List<String> existingFiles = [];
+  bool isLoading = false;
 
-  List<File> pickedFile = [];
-
-  Future<void> uploadFile() async {
-    final storage = FirebaseStorage.instance;
-    for (var file in pickedFile) {
-      final ref = storage.ref().child('Assignments/$courseController/${file.path}');
-      await ref.putFile(file);
-    }
-  }
-
-  Future<void> removeFile(int index) async {
-    setState(() {
-      pickedFile.removeAt(index);
-    });
-  }
-
-  Future<void> selectFile() async {
-    final results = await FilePicker.platform.pickFiles(allowMultiple: true);
-
-    if (results != null) {
-      setState(() {
-        pickedFile = results.files.map((file) => File(file.path!)).toList();
-      });
-    }
+  @override
+  void initState() {
+    super.initState();
+    courseController.text = dropdownValue;
+    loadExistingFiles();
   }
 
   @override
@@ -65,11 +45,11 @@ class _Piyush_AssignmentState extends State<Piyush_Assignment> {
                   color: Colors.orangeAccent,
                 ),
                 onChanged: (String? value) {
-                  // This is called when the user selects an item.
                   setState(() {
-                    dropdownvalue = value!;
+                    dropdownValue = value!;
                     courseController.text = value;
                   });
+                  loadExistingFiles();
                 },
                 items: list.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
@@ -77,102 +57,121 @@ class _Piyush_AssignmentState extends State<Piyush_Assignment> {
                     child: Text(value),
                   );
                 }).toList(),
-                value: dropdownvalue,
+                value: dropdownValue,
               ),
               const SizedBox(height: 20,),
+              const Text("Uploaded Files:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10,),
+              isLoading
+                  ? const CircularProgressIndicator()
+                  : ListView.builder(
+                shrinkWrap: true,
+                itemCount: existingFiles.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(existingFiles[index]),
+                    trailing: IconButton(
+                      icon: const Icon(CupertinoIcons.delete),
+                      onPressed: () => deleteExistingFile(existingFiles[index]),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (BuildContext context) {
-              return MeetingOption(
-                pickedFile: pickedFile,
-                uploadFile: uploadFile,
-                removeFile: removeFile,
-              );
-            },
-          );
-        },
-        child: const Icon(CupertinoIcons.pen),
-      ),
+      floatingActionButton: _uploadMediaButton(context),
     );
   }
-}
 
-
-class MeetingOption extends StatefulWidget {
-  final List<File> pickedFile;
-  final Function() uploadFile;
-  final Function(int) removeFile;
-
-  const MeetingOption({
-    required this.pickedFile,
-    required this.uploadFile,
-    required this.removeFile,
-    super.key,
-  });
-
-  @override
-  State<MeetingOption> createState() => _MeetingOptionState();
-}
-
-class _MeetingOptionState extends State<MeetingOption> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(CupertinoIcons.xmark),
-        ),
-        title: const Text('Edit Assignment'),
-      ),
-      body: Column(
-        children: [
-          const Divider(),
-          TextButton(
-            onPressed: widget.uploadFile,
-            child: const Row(
-              children: [
-                Icon(
-                  CupertinoIcons.add,
-                  color: Colors.black,
-                ),
-                SizedBox(width: 25,),
-                Text(
-                  'Add',
-                  style: TextStyle(
-                      fontSize: 23,
-                      color: Colors.black
-                  ),
-                )
-              ],
-            ),
-          ),
-          const SizedBox(height: 10,),
-          ListView.builder(
-            shrinkWrap: true,
-            itemCount: widget.pickedFile.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(widget.pickedFile[index].path.split('/').last),
-                trailing: IconButton(
-                  onPressed: () {widget.removeFile(index);},
-                  icon: const Icon(CupertinoIcons.delete),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+  Widget _uploadMediaButton(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () async {
+        List<File>? selectedFiles = await pickFiles(context);
+        if (selectedFiles != null && selectedFiles.isNotEmpty) {
+          setState(() {
+            isLoading = true;
+          });
+          await uploadFiles(selectedFiles);
+          loadExistingFiles();
+        }
+      },
+      child: const Icon(CupertinoIcons.folder),
     );
+  }
+
+  Future<List<File>?> pickFiles(BuildContext context) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result != null && result.paths.isNotEmpty) {
+      return result.paths.map((path) => File(path!)).toList();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No files selected or file paths are null')),
+      );
+      return null;
+    }
+  }
+
+  Future<void> uploadFiles(List<File> files) async {
+    for (var file in files) {
+      try {
+        final ref = FirebaseStorage.instance.ref().child("Assignments/${courseController.text}/${file.path.split('/').last}");
+        await ref.putFile(file);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File uploaded successfully')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error uploading file: $e')),
+        );
+      }
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  Future<void> loadExistingFiles() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final listRef = FirebaseStorage.instance.ref().child("Assignments/${courseController.text}");
+      final ListResult result = await listRef.listAll();
+      setState(() {
+        existingFiles = result.items.map((item) => item.name).toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading files: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> deleteExistingFile(String fileName) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final ref = FirebaseStorage.instance.ref().child("Assignments/${courseController.text}/$fileName");
+      await ref.delete();
+      loadExistingFiles();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File deleted successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting file: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }

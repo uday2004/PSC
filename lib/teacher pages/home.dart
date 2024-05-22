@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:psc/teacher%20pages/settings.dart';
 import 'package:psc/teacher%20pages/study_material.dart';
-import 'notification.dart'as my_app_notification;
+import 'notification.dart' as my_app_notification;
 import 'assignment.dart';
 import 'chats.dart';
 import 'classes.dart';
@@ -21,8 +21,8 @@ class _Piyush_HomeState extends State<Piyush_Home> {
   int _currentIndex = 0;
   int choiceIndex = 0;
 
-  Future<void> _refresh(){
-    return Future.delayed(const Duration (seconds: 0),);
+  Future<void> _refresh() {
+    return Future.delayed(const Duration(seconds: 0));
   }
 
   @override
@@ -40,7 +40,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustAppBar(),
+      appBar: const CustAppBar(),
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {
@@ -51,10 +51,10 @@ class _Piyush_HomeState extends State<Piyush_Home> {
         children: [
           // Your pages here
           HomePageContent(context),
-          Piyush_Assignment(),
-          Piyush_Classes(),
-          Piyush_Chats(),
-          Piyush_Study_Material(),
+          const PiyushAssignment(),
+          const Piyush_Classes(),
+          const Piyush_Chats(),
+          const Piyush_Study_Material(),
         ],
       ),
       bottomNavigationBar: CustBottomBar(
@@ -85,91 +85,9 @@ class _Piyush_HomeState extends State<Piyush_Home> {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 20,),
-                const Text('Students in waiting room',style: TextStyle(fontSize: 20),),
-                const SizedBox(height: 20,),
-                StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('Users').snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return Text('Error: ${snapshot.error}');
-                      } else {
-                        final students = snapshot.data?.docs ?? [];
-                        if (students.contains('Status') != 'Waiting') {
-                          return const Text('No one is in the waiting room...');
-                        } else {
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: students.length,
-                            itemBuilder: (context, index) {
-                              final user = students[index].data();
-                              if (user != null &&
-                                  user is Map<String, dynamic>) {
-                                final status = user['Status'] as String?; // Nullable
-                                final firstName = user['First Name'] as String?;
-                                final lastName = user['Last Name'] as String?;
-                                final course = user['Course'] as String?;
-                                if (status?.toLowerCase() == 'waiting') {
-                                  final name = (firstName ?? '') + ' ' +
-                                      (lastName ?? '');
-                                  return ListTile(
-                                    title: Text(name),
-                                    subtitle: Text(course ?? ''),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                            onPressed: () async {
-                                              try {
-                                                await FirebaseFirestore.instance
-                                                    .collection('Users')
-                                                    .doc(students[index]
-                                                    .id) // Use the document ID directly
-                                                    .update(
-                                                    {'Status': 'Active'});
-                                                print(
-                                                    'Document updated successfully');
-                                              } catch (error) {
-                                                print(
-                                                    'Error updating document: $error');
-                                              }
-                                            },
-                                            icon: const Icon(Icons.check)
-                                        ),
-                                        IconButton(
-                                            onPressed: () async {
-                                              try {
-                                                await FirebaseFirestore.instance
-                                                    .collection('Users')
-                                                    .doc(students[index]
-                                                    .id) // Use the document ID directly
-                                                    .update(
-                                                    {'Status': 'Removed'});
-                                                print(
-                                                    'Document updated successfully');
-                                              } catch (error) {
-                                                print(
-                                                    'Error updating document: $error');
-                                              }
-                                            },
-                                            icon: const Icon(Icons.close)
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                          );
-                        }
-                      }
-                    }
-                ),
-                const SizedBox(height: 20,),
-                const Text('Students in class room',style: TextStyle(fontSize: 20),),
-                const SizedBox(height: 20,),
+                const SizedBox(height: 20),
+                const Text('Students in waiting room', style: TextStyle(fontSize: 20)),
+                const SizedBox(height: 20),
                 StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance.collection('Users').snapshots(),
                   builder: (context, snapshot) {
@@ -177,56 +95,125 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                       return const Center(child: CircularProgressIndicator());
                     } else if (snapshot.hasError) {
                       return Text('Error: ${snapshot.error}');
-                    }
-                    final students = snapshot.data?.docs ?? [];
-                    final activeStudent = students.where((user) {
-                      final status = user['Status'] as String?;
-                      final role = user['role'] as String?;
-                      return status == 'Active' && role == 'Student';
-                    }).toList(); // Filter out active students only
-                    return SizedBox(
-                      height: activeStudent.length * 100.0, // Assuming each ListTile has a height of 100. Adjust this value accordingly
-                      width: double.infinity,
-                      child: ListView.builder(
-                        itemCount: activeStudent.length,
-                        itemExtent: 100.0, // Height of each item in the list
+                    } else {
+                      final students = snapshot.data?.docs ?? [];
+                      final waitingStudents = students.where((user) {
+                        final data = user.data() as Map<String, dynamic>;
+                        final status = data['Status'] as String?;
+                        final role = data['role'] as String?;
+                        return status == 'Waiting' && role == 'Student';
+                      }).toList();
+
+                      if (waitingStudents.isEmpty) {
+                        return const Text('No one is in the waiting room...');
+                      }
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: waitingStudents.length,
                         itemBuilder: (context, index) {
-                          final user = activeStudent[index].data();
-                          if (user != null && user is Map<String, dynamic>) {
-                            final status = user['Status'] as String?;
-                            final role = user['role'] as String?;
-                            if (status == 'Active' && role == 'Student') {
-                              final course = user['Course'] as String?;
-                              final firstName = user['First Name'] as String?;
-                              final lastName = user['Last Name'] as String?;
-                              final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
-                              final email = user['email'] as String?;
-                              return ListTile(
-                                title: Text(name ?? ''),
-                                subtitle: Text(email ?? ''),
-                                trailing: IconButton(
-                                  onPressed: () async {
-                                    try{
-                                      await FirebaseFirestore.instance.collection('Users')
-                                          .doc(activeStudent[index].id) // Use the document ID directly
-                                          .update({'Status': 'Removed'});
-                                      print('Uploading data sucessful');
-                                    }catch (e){
-                                      print('Error updating document: $e');
-                                    }
-                                  },
-                                  icon: const Icon(Icons.exit_to_app_sharp),
-                                ),
-                              );
-                            } else {
-                              return const SizedBox();
-                            }
+                          final user = waitingStudents[index].data() as Map<String, dynamic>?;
+                          if (user != null) {
+                            final firstName = user['First Name'] as String?;
+                            final lastName = user['Last Name'] as String?;
+                            final course = user['Course'] as String?;
+                            final email = user['email'] as String?;
+                            final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
+
+                            return ListTile(
+                              title: Text(name),
+                              subtitle: Text(email ?? ''),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    onPressed: () async {
+                                      try {
+                                        await FirebaseFirestore.instance.collection('Users')
+                                            .doc(waitingStudents[index].id) // Use the document ID directly
+                                            .update({'Status': 'Active'});
+                                      } catch (e) {
+                                        print('Error updating document: $e');
+                                      }
+                                    },
+                                    icon: const Icon(Icons.check),
+                                  ),
+                                  IconButton(
+                                    onPressed: () async {
+                                      try {
+                                        await FirebaseFirestore.instance.collection('Users')
+                                            .doc(waitingStudents[index].id) // Use the document ID directly
+                                            .update({'Status': 'Removed'});
+                                      } catch (e) {
+                                        print('Error updating document: $e');
+                                      }
+                                    },
+                                    icon: const Icon(Icons.close_outlined),
+                                  ),
+                                ],
+                              ),
+                            );
                           } else {
                             return const SizedBox();
                           }
                         },
-                      ),
-                    );
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+                const Text('Students in class room', style: TextStyle(fontSize: 20)),
+                const SizedBox(height: 20),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('Users').snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}');
+                    } else {
+                      final students = snapshot.data?.docs ?? [];
+                      final activeStudents = students.where((user) {
+                        final data = user.data() as Map<String, dynamic>;
+                        final status = data['Status'] as String?;
+                        final role = data['role'] as String?;
+                        return status == 'Active' && role == 'Student';
+                      }).toList();
+
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: activeStudents.length,
+                        itemBuilder: (context, index) {
+                          final user = activeStudents[index].data() as Map<String, dynamic>?;
+                          if (user != null) {
+                            final firstName = user['First Name'] as String?;
+                            final lastName = user['Last Name'] as String?;
+                            final course = user['Course'] as String?;
+                            final email = user['email'] as String?;
+                            final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
+
+                            return ListTile(
+                              title: Text(name),
+                              subtitle: Text(email ?? ''),
+                              trailing: IconButton(
+                                onPressed: () async {
+                                  try {
+                                    await FirebaseFirestore.instance.collection('Users')
+                                        .doc(activeStudents[index].id) // Use the document ID directly
+                                        .update({'Status': 'Removed'});
+                                  } catch (e) {
+                                    print('Error updating document: $e');
+                                  }
+                                },
+                                icon: const Icon(Icons.exit_to_app_sharp),
+                              ),
+                            );
+                          } else {
+                            return const SizedBox();
+                          }
+                        },
+                      );
+                    }
                   },
                 ),
               ],
@@ -238,8 +225,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
   }
 }
 
-
-//CUSTOM BOTTOM APP BAR
+// CUSTOM BOTTOM APP BAR
 class CustBottomBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -281,7 +267,7 @@ class CustBottomBar extends StatelessWidget {
   }
 }
 
-//CUSTOM APP BAR
+// CUSTOM APP BAR
 class CustAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustAppBar({
     super.key,

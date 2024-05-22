@@ -18,7 +18,6 @@ class AuthPage extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Return a loading indicator while waiting for the authentication state
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasData) {
             // User is authenticated, check their role
