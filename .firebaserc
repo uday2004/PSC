@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "staging": "psc-4fbce",
+    "default": "psc-4fbce"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}
