@@ -1,14 +1,16 @@
-import 'package:flutter/widgets.dart';
-import 'package:psc/student%20pages/setting.dart';
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:psc/student%20pages/setting.dart' as psc_settings;
 import 'package:psc/student%20pages/study_material.dart';
 import 'chats.dart';
 import 'classes.dart';
 import 'notification.dart' as my_app_notification;
-
-import 'package:flutter/material.dart';
-
-
-import 'package:flutter/cupertino.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,37 +20,85 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   late PageController _pageController;
   int _currentIndex = 0;
-  int choiceIndex = 0;
-  double present = 60;
-  double absent = 40;
-
-  Future<void> _refresh(){
-    return Future.delayed(const Duration (seconds: 0),);
-  }
-
-  Map<String, double>dataMap = {
-    "Present": 60,
-    "Absent": 40,
-  };
-
-  List<Color> colorList = [
-    const Color(0xFF01579B),
-    const Color(0xFF03A9F4),
-  ];
+  List<String> existingFiles = [];
+  bool isLoading = false;
+  late String userClass;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    _getUserClass();
+  }
+
+  Future<void> _getUserClass() async {
+    String? uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid != null) {
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+          .collection('Users')
+          .doc(uid)
+          .get();
+
+      Map<String, dynamic>? userData = docSnapshot.data() as Map<String, dynamic>?;
+
+      if (userData != null) {
+        setState(() {
+          userClass = userData['Course'];
+        });
+        loadExistingFiles(); // Load existing files once user class is fetched
+      }
+    }
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> loadExistingFiles() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final listRef = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass");
+      final firebase_storage.ListResult result = await listRef.listAll();
+      setState(() {
+        existingFiles = result.items.map((item) => item.name).toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading files: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<File?> downloadFile(String fileName) async {
+    try {
+      final ref = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass/$fileName");
+      final Directory tempDir = await getTemporaryDirectory();
+      final String tempFilePath = '${tempDir.path}/$fileName';
+      await ref.writeToFile(File(tempFilePath));
+      final Directory appDocDir = await getApplicationDocumentsDirectory();
+      final String appDocPath = '${appDocDir.path}/$fileName';
+      final File tempFile = File(tempFilePath);
+      await tempFile.copy(appDocPath);
+      await tempFile.delete();
+      return File(appDocPath);
+    } catch (e) {
+      print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error downloading file: $e')),
+      );
+      return null;
+    }
   }
 
   @override
@@ -64,11 +114,10 @@ class _HomePageState extends State<HomePage> {
           });
         },
         children: [
-          // Your pages here
           HomePageContent(context),
-          Classes(),
-          Chats(),
-          StudyMaterial(),
+          const Classes(),
+          const Chats(),
+          const StudyMaterial(),
         ],
       ),
       bottomNavigationBar: CustBottomBar(
@@ -87,8 +136,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-
-  Container HomePageContent(BuildContext context) {
+  Widget HomePageContent(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary,
@@ -96,38 +144,50 @@ class _HomePageState extends State<HomePage> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
         child: RefreshIndicator(
-          onRefresh: _refresh,
+          onRefresh: loadExistingFiles,
           child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: Column(
-                children: [
-                  const SizedBox(height: 10,),
-                  const Text('Assignments : ',style: TextStyle(fontSize: 16),),
-                  const SizedBox(height: 10,),
-                  Container(
-                    height: MediaQuery.of(context).size.height,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary,
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(
-                        color: Colors.black
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text('No Assignments'),
+            scrollDirection: Axis.vertical,
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                const Text('Assignments:', style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 10),
+                Container(
+                  height: MediaQuery.of(context).size.height,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
+                    borderRadius: BorderRadius.circular(12.0),
+                    border: Border.all(
+                      color: Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 8,)
-                ],
-              ),
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: existingFiles.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(existingFiles[index]),
+                        trailing: IconButton(
+                          icon: const Icon(CupertinoIcons.down_arrow),
+                          onPressed: () => downloadFile(existingFiles[index]),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
+          ),
         ),
       ),
     );
   }
 }
 
-//CUSTOM BOTTOM APP BAR
+// CUSTOM BOTTOM APP BAR
 class CustBottomBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -165,7 +225,7 @@ class CustBottomBar extends StatelessWidget {
   }
 }
 
-//CUSTOM APP BAR
+// CUSTOM APP BAR
 class CustAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustAppBar({
     super.key,
@@ -184,7 +244,7 @@ class CustAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) {
-                return Settings();
+                return psc_settings.Settings();
               }));
             },
             icon: const Icon(Icons.settings)),

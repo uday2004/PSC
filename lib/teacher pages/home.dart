@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:psc/teacher%20pages/settings.dart';
 import 'package:psc/teacher%20pages/study_material.dart';
 import 'notification.dart' as my_app_notification;
@@ -54,7 +53,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
           const PiyushAssignment(),
           const Piyush_Classes(),
           const Piyush_Chats(),
-          const Piyush_Study_Material(),
+          const PiyushStudyMaterial(),
         ],
       ),
       bottomNavigationBar: CustBottomBar(
@@ -83,6 +82,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
         child: RefreshIndicator(
           onRefresh: _refresh,
           child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
             child: Column(
               children: [
                 const SizedBox(height: 20),
@@ -179,6 +179,10 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                         final role = data['role'] as String?;
                         return status == 'Active' && role == 'Student';
                       }).toList();
+
+                      if (activeStudents.isEmpty) {
+                        return const Text('No one is in the waiting room...');
+                      }
 
                       return ListView.builder(
                         shrinkWrap: true,

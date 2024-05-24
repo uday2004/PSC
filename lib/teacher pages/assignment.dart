@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -30,6 +30,7 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,
       body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Column(
@@ -88,7 +89,7 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
   Widget _uploadMediaButton(BuildContext context) {
     return FloatingActionButton(
       onPressed: () async {
-        List<File>? selectedFiles = await pickFiles(context);
+        List<PlatformFile>? selectedFiles = await pickFiles(context);
         if (selectedFiles != null && selectedFiles.isNotEmpty) {
           setState(() {
             isLoading = true;
@@ -101,10 +102,10 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
     );
   }
 
-  Future<List<File>?> pickFiles(BuildContext context) async {
+  Future<List<PlatformFile>?> pickFiles(BuildContext context) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result != null && result.paths.isNotEmpty) {
-      return result.paths.map((path) => File(path!)).toList();
+    if (result != null && result.files.isNotEmpty) {
+      return result.files;
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No files selected or file paths are null')),
@@ -113,14 +114,22 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
     }
   }
 
-  Future<void> uploadFiles(List<File> files) async {
+  Future<void> uploadFiles(List<PlatformFile> files) async {
     for (var file in files) {
       try {
-        final ref = FirebaseStorage.instance.ref().child("Assignments/${courseController.text}/${file.path.split('/').last}");
-        await ref.putFile(file);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File uploaded successfully')),
-        );
+        if (file.bytes != null) {
+          final ref = FirebaseStorage.instance
+              .ref()
+              .child("Assignments/${courseController.text}/${file.name}");
+          await ref.putData(Uint8List.fromList(file.bytes!));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File uploaded successfully')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File bytes are null')),
+          );
+        }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error uploading file: $e')),
