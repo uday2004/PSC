@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -60,7 +63,10 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                 value: dropdownValue,
               ),
               const SizedBox(height: 20),
-              const Text("Uploaded Files:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Uploaded Files:",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 10),
               isLoading
                   ? const CircularProgressIndicator()
@@ -104,7 +110,11 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   }
 
   Future<List<PlatformFile>?> pickFiles(BuildContext context) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.any,
+      withData: true, // Ensure withData is set to true
+    );
     if (result != null && result.files.isNotEmpty) {
       return result.files;
     } else {
@@ -116,13 +126,17 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   }
 
   Future<void> uploadFiles(List<PlatformFile> files) async {
-    for (var file in files) {
-      try {
-        if (file.bytes != null) {
+    try {
+      for (var file in files) {
+        Uint8List? fileBytes = file.bytes;
+        if (fileBytes == null && file.path != null) {
+          fileBytes = await File(file.path!).readAsBytes();
+        }
+        if (fileBytes != null) {
           final ref = FirebaseStorage.instance
               .ref()
               .child("Study Material/${courseController.text}/${file.name}");
-          await ref.putData(file.bytes!);
+          await ref.putData(fileBytes);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('File uploaded successfully')),
           );
@@ -131,15 +145,16 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
             const SnackBar(content: Text('File bytes are null')),
           );
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading file: $e')),
-        );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error uploading file: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
-    setState(() {
-      isLoading = false;
-    });
   }
 
   Future<void> loadExistingFiles() async {
@@ -170,7 +185,7 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
       });
       final ref = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/$fileName");
       await ref.delete();
-      loadExistingFiles();
+      await loadExistingFiles();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('File deleted successfully')),
       );

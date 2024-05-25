@@ -17,7 +17,7 @@ class Piyush_Chats extends StatelessWidget {
   //building a list of users excepting the current user
   Widget _buildUserList (){
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('Users').snapshots(),
+      stream: FirebaseFirestore.instance.collection('Users').where('Status', isEqualTo: 'Active').snapshots(),
       builder: (context, snapshot){
         if(snapshot.hasError){
           return const Text("error");
@@ -26,7 +26,7 @@ class Piyush_Chats extends StatelessWidget {
         if(snapshot.connectionState == ConnectionState.waiting){
           return const Text("loading...");
         }
-
+        
         return ListView(
           children: snapshot.data!.docs
               .where((doc) =>

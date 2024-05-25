@@ -49,27 +49,6 @@ class Piyush_Settings extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(
-                width: 375,
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    suffixIcon: Icon(CupertinoIcons.pen),
-                  ),
-
-                ),
-              ),
-              const SizedBox(height: 20,),
-              const SizedBox(
-                width: 375,
-                child: TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    suffixIcon: Icon(CupertinoIcons.pen),
-                  ),
-
-                ),
-              ),
               const SizedBox(height: 20,),
               TextButton(onPressed: () async {
                 try {

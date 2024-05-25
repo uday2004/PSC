@@ -51,7 +51,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
           // Your pages here
           HomePageContent(context),
           const PiyushAssignment(),
-          const Piyush_Classes(),
+          const PiyushClasses(),
           const Piyush_Chats(),
           const PiyushStudyMaterial(),
         ],
@@ -181,7 +181,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                       }).toList();
 
                       if (activeStudents.isEmpty) {
-                        return const Text('No one is in the waiting room...');
+                        return const Text('No one is in the class room...');
                       }
 
                       return ListView.builder(
@@ -247,7 +247,7 @@ class CustBottomBar extends StatelessWidget {
       onTap: onTap,
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
+          icon: Icon(Icons.home_outlined,),
           label: 'Home',
         ),
         BottomNavigationBarItem(
@@ -267,6 +267,9 @@ class CustBottomBar extends StatelessWidget {
           label: 'Material',
         ),
       ],
+      selectedItemColor: Colors.orangeAccent,  // Customize the selected item text color
+      unselectedItemColor: Colors.white,  // Customize the unselected item text color
+      backgroundColor: Colors.blue,
     );
   }
 }

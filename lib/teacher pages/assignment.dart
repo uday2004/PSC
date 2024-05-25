@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -103,7 +105,10 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
   }
 
   Future<List<PlatformFile>?> pickFiles(BuildContext context) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,  // Ensure withData is set to true to get file bytes
+    );
     if (result != null && result.files.isNotEmpty) {
       return result.files;
     } else {
@@ -117,11 +122,16 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
   Future<void> uploadFiles(List<PlatformFile> files) async {
     for (var file in files) {
       try {
-        if (file.bytes != null) {
+        Uint8List? fileBytes = file.bytes;
+        if (fileBytes == null && file.path != null) {
+          fileBytes = await File(file.path!).readAsBytes();
+        }
+
+        if (fileBytes != null) {
           final ref = FirebaseStorage.instance
               .ref()
               .child("Assignments/${courseController.text}/${file.name}");
-          await ref.putData(Uint8List.fromList(file.bytes!));
+          await ref.putData(fileBytes);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('File uploaded successfully')),
           );

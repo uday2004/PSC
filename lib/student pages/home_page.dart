@@ -221,6 +221,9 @@ class CustBottomBar extends StatelessWidget {
           label: 'Material',
         ),
       ],
+      selectedItemColor: Colors.orangeAccent,  // Customize the selected item text color
+      unselectedItemColor: Colors.white,  // Customize the unselected item text color
+      backgroundColor: Colors.blue,
     );
   }
 }
