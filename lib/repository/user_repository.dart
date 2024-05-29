@@ -12,7 +12,7 @@ class UserRepository extends GetxController{
   createUser (UserModel user) async {
     await _db.collection("Users").add(user.toJson()).whenComplete(() =>
         Get.snackbar(
-          "Sucerss", "Your account has been created",
+          "Success", "Your account has been created",
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.green,

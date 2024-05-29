@@ -17,14 +17,12 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   TextEditingController courseController = TextEditingController();
   String dropdownValue = list.first;
   static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
-  List<String> existingFiles = [];
   bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
     courseController.text = dropdownValue;
-    loadExistingFiles();
   }
 
   @override
@@ -42,7 +40,6 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                 isExpanded: true,
                 icon: const Icon(Icons.arrow_downward),
                 elevation: 16,
-                style: const TextStyle(color: Colors.black),
                 underline: Container(
                   height: 2,
                   color: Colors.orangeAccent,
@@ -52,7 +49,6 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                     dropdownValue = value!;
                     courseController.text = value;
                   });
-                  loadExistingFiles();
                 },
                 items: list.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
@@ -68,19 +64,32 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              isLoading
-                  ? const CircularProgressIndicator()
-                  : SizedBox(
+              SizedBox(
                 height: 300, // Give a fixed height to ListView
-                child: ListView.builder(
-                  itemCount: existingFiles.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(existingFiles[index]),
-                      trailing: IconButton(
-                        icon: const Icon(CupertinoIcons.delete),
-                        onPressed: () => deleteExistingFile(existingFiles[index]),
-                      ),
+                child: StreamBuilder<List<String>>(
+                  stream: _fileListStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    }
+                    if (snapshot.hasError) {
+                      return const Text('Error loading files');
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Text('No files found');
+                    }
+                    List<String> files = snapshot.data!;
+                    return ListView.builder(
+                      itemCount: files.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(files[index]),
+                          trailing: IconButton(
+                            icon: const Icon(CupertinoIcons.delete),
+                            onPressed: () => deleteExistingFile(files[index]),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -102,7 +111,9 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
             isLoading = true;
           });
           await uploadFiles(selectedFiles);
-          loadExistingFiles(); // Refresh file list after upload
+          setState(() {
+            isLoading = false;
+          });
         }
       },
       child: const Icon(CupertinoIcons.folder),
@@ -150,31 +161,27 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error uploading file: $e')),
       );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
     }
   }
 
-  Future<void> loadExistingFiles() async {
+  Stream<List<String>> _fileListStream() async* {
+    while (true) {
+      List<String> files = await _loadExistingFiles();
+      yield files;
+      await Future.delayed(const Duration(seconds: 5));
+    }
+  }
+
+  Future<List<String>> _loadExistingFiles() async {
     try {
-      setState(() {
-        isLoading = true;
-      });
       final listRef = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}");
       final ListResult result = await listRef.listAll();
-      setState(() {
-        existingFiles = result.items.map((item) => item.name).toList();
-      });
+      return result.items.map((item) => item.name).toList();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading files: $e')),
       );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+      return [];
     }
   }
 
@@ -185,7 +192,6 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
       });
       final ref = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/$fileName");
       await ref.delete();
-      await loadExistingFiles();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('File deleted successfully')),
       );

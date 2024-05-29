@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:psc/teacher%20pages/settings.dart';
 import 'package:psc/teacher%20pages/study_material.dart';
-import 'notification.dart' as my_app_notification;
 import 'assignment.dart';
 import 'chats.dart';
 import 'classes.dart';
@@ -83,144 +82,146 @@ class _Piyush_HomeState extends State<Piyush_Home> {
           onRefresh: _refresh,
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                const Text('Students in waiting room', style: TextStyle(fontSize: 20)),
-                const SizedBox(height: 20),
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('Users').snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    } else {
-                      final students = snapshot.data?.docs ?? [];
-                      final waitingStudents = students.where((user) {
-                        final data = user.data() as Map<String, dynamic>;
-                        final status = data['Status'] as String?;
-                        final role = data['role'] as String?;
-                        return status == 'Waiting' && role == 'Student';
-                      }).toList();
+            child: Center(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  const Text('Students in waiting room', style: TextStyle(fontSize: 20)),
+                  const SizedBox(height: 20),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('Users').snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        final students = snapshot.data?.docs ?? [];
+                        final waitingStudents = students.where((user) {
+                          final data = user.data() as Map<String, dynamic>;
+                          final status = data['Status'] as String?;
+                          final role = data['role'] as String?;
+                          return status == 'Waiting' && role == 'Student';
+                        }).toList();
 
-                      if (waitingStudents.isEmpty) {
-                        return const Text('No one is in the waiting room...');
+                        if (waitingStudents.isEmpty) {
+                          return const Text('No one is in the waiting room...');
+                        }
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: waitingStudents.length,
+                          itemBuilder: (context, index) {
+                            final user = waitingStudents[index].data() as Map<String, dynamic>?;
+                            if (user != null) {
+                              final firstName = user['First Name'] as String?;
+                              final lastName = user['Last Name'] as String?;
+                              final course = user['Course'] as String?;
+                              final email = user['email'] as String?;
+                              final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
+
+                              return ListTile(
+                                title: Text(name),
+                                subtitle: Text(email ?? ''),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      onPressed: () async {
+                                        try {
+                                          await FirebaseFirestore.instance.collection('Users')
+                                              .doc(waitingStudents[index].id) // Use the document ID directly
+                                              .update({'Status': 'Active'});
+                                        } catch (e) {
+                                          print('Error updating document: $e');
+                                        }
+                                      },
+                                      icon: const Icon(Icons.check),
+                                    ),
+                                    IconButton(
+                                      onPressed: () async {
+                                        try {
+                                          await FirebaseFirestore.instance.collection('Users')
+                                              .doc(waitingStudents[index].id) // Use the document ID directly
+                                              .update({'Status': 'Removed'});
+                                        } catch (e) {
+                                          print('Error updating document: $e');
+                                        }
+                                      },
+                                      icon: const Icon(Icons.close_outlined),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              return const SizedBox();
+                            }
+                          },
+                        );
                       }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('Students in class room', style: TextStyle(fontSize: 20)),
+                  const SizedBox(height: 20),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('Users').snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Text('Error: ${snapshot.error}');
+                      } else {
+                        final students = snapshot.data?.docs ?? [];
+                        final activeStudents = students.where((user) {
+                          final data = user.data() as Map<String, dynamic>;
+                          final status = data['Status'] as String?;
+                          final role = data['role'] as String?;
+                          return status == 'Active' && role == 'Student';
+                        }).toList();
 
-                      return ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: waitingStudents.length,
-                        itemBuilder: (context, index) {
-                          final user = waitingStudents[index].data() as Map<String, dynamic>?;
-                          if (user != null) {
-                            final firstName = user['First Name'] as String?;
-                            final lastName = user['Last Name'] as String?;
-                            final course = user['Course'] as String?;
-                            final email = user['email'] as String?;
-                            final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
+                        if (activeStudents.isEmpty) {
+                          return const Text('No one is in the class room...');
+                        }
 
-                            return ListTile(
-                              title: Text(name),
-                              subtitle: Text(email ?? ''),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    onPressed: () async {
-                                      try {
-                                        await FirebaseFirestore.instance.collection('Users')
-                                            .doc(waitingStudents[index].id) // Use the document ID directly
-                                            .update({'Status': 'Active'});
-                                      } catch (e) {
-                                        print('Error updating document: $e');
-                                      }
-                                    },
-                                    icon: const Icon(Icons.check),
-                                  ),
-                                  IconButton(
-                                    onPressed: () async {
-                                      try {
-                                        await FirebaseFirestore.instance.collection('Users')
-                                            .doc(waitingStudents[index].id) // Use the document ID directly
-                                            .update({'Status': 'Removed'});
-                                      } catch (e) {
-                                        print('Error updating document: $e');
-                                      }
-                                    },
-                                    icon: const Icon(Icons.close_outlined),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            return const SizedBox();
-                          }
-                        },
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 20),
-                const Text('Students in class room', style: TextStyle(fontSize: 20)),
-                const SizedBox(height: 20),
-                StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance.collection('Users').snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return Text('Error: ${snapshot.error}');
-                    } else {
-                      final students = snapshot.data?.docs ?? [];
-                      final activeStudents = students.where((user) {
-                        final data = user.data() as Map<String, dynamic>;
-                        final status = data['Status'] as String?;
-                        final role = data['role'] as String?;
-                        return status == 'Active' && role == 'Student';
-                      }).toList();
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: activeStudents.length,
+                          itemBuilder: (context, index) {
+                            final user = activeStudents[index].data() as Map<String, dynamic>?;
+                            if (user != null) {
+                              final firstName = user['First Name'] as String?;
+                              final lastName = user['Last Name'] as String?;
+                              final course = user['Course'] as String?;
+                              final email = user['email'] as String?;
+                              final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
 
-                      if (activeStudents.isEmpty) {
-                        return const Text('No one is in the class room...');
+                              return ListTile(
+                                title: Text(name),
+                                subtitle: Text(email ?? ''),
+                                trailing: IconButton(
+                                  onPressed: () async {
+                                    try {
+                                      await FirebaseFirestore.instance.collection('Users')
+                                          .doc(activeStudents[index].id) // Use the document ID directly
+                                          .update({'Status': 'Removed'});
+                                    } catch (e) {
+                                      print('Error updating document: $e');
+                                    }
+                                  },
+                                  icon: const Icon(Icons.exit_to_app_sharp),
+                                ),
+                              );
+                            } else {
+                              return const SizedBox();
+                            }
+                          },
+                        );
                       }
-
-                      return ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: activeStudents.length,
-                        itemBuilder: (context, index) {
-                          final user = activeStudents[index].data() as Map<String, dynamic>?;
-                          if (user != null) {
-                            final firstName = user['First Name'] as String?;
-                            final lastName = user['Last Name'] as String?;
-                            final course = user['Course'] as String?;
-                            final email = user['email'] as String?;
-                            final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
-
-                            return ListTile(
-                              title: Text(name),
-                              subtitle: Text(email ?? ''),
-                              trailing: IconButton(
-                                onPressed: () async {
-                                  try {
-                                    await FirebaseFirestore.instance.collection('Users')
-                                        .doc(activeStudents[index].id) // Use the document ID directly
-                                        .update({'Status': 'Removed'});
-                                  } catch (e) {
-                                    print('Error updating document: $e');
-                                  }
-                                },
-                                icon: const Icon(Icons.exit_to_app_sharp),
-                              ),
-                            );
-                          } else {
-                            return const SizedBox();
-                          }
-                        },
-                      );
-                    }
-                  },
-                ),
-              ],
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -297,13 +298,6 @@ class CustAppBar extends StatelessWidget implements PreferredSizeWidget {
               }));
             },
             icon: const Icon(Icons.settings)),
-        IconButton(
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) {
-                return const my_app_notification.Piyush_Notification();
-              }));
-            },
-            icon: const Icon(Icons.notifications)),
       ],
     );
   }
