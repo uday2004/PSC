@@ -17,6 +17,7 @@ class StudyMaterial extends StatefulWidget {
 class _StudyMaterialState extends State<StudyMaterial> {
   late String userClass;
   List<String> existingFiles = [];
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -28,19 +29,66 @@ class _StudyMaterialState extends State<StudyMaterial> {
     String? uid = FirebaseAuth.instance.currentUser?.uid;
 
     if (uid != null) {
-      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(uid)
-          .get();
+      try {
+        DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(uid)
+            .get();
 
-      Map<String, dynamic>? userData = docSnapshot.data() as Map<String, dynamic>?;
+        Map<String, dynamic>? userData = docSnapshot.data() as Map<String, dynamic>?;
 
-      if (userData != null) {
-        setState(() {
-          userClass = userData['Course'];
-        });
-        loadExistingFiles(); // Load existing files once user class is fetched
+        if (userData != null) {
+          setState(() {
+            userClass = userData['Course'];
+          });
+          loadExistingFiles(); // Load existing files once user class is fetched
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching user data: $e')),
+        );
       }
+    }
+  }
+
+  Future<void> loadExistingFiles() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      final listRef = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass");
+      final firebase_storage.ListResult result = await listRef.listAll();
+      setState(() {
+        existingFiles = result.items.map((item) => item.name).toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading files: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<File?> downloadFile(String fileName) async {
+    try {
+      final ref = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass/$fileName");
+      final Directory tempDir = await getTemporaryDirectory();
+      final String tempFilePath = '${tempDir.path}/$fileName';
+      await ref.writeToFile(File(tempFilePath));
+      final Directory appDocDir = await getApplicationDocumentsDirectory();
+      final String appDocPath = '${appDocDir.path}/$fileName';
+      final File tempFile = File(tempFilePath);
+      await tempFile.copy(appDocPath);
+      await tempFile.delete();
+      return File(appDocPath);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error downloading file: $e')),
+      );
+      return null;
     }
   }
 
@@ -53,9 +101,14 @@ class _StudyMaterialState extends State<StudyMaterial> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _buildStudyMaterialList(),
+            const Text(
+              'Study Materials',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 10),
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Expanded(child: _buildStudyMaterialList()),
           ],
         ),
       ),
@@ -63,66 +116,22 @@ class _StudyMaterialState extends State<StudyMaterial> {
   }
 
   Widget _buildStudyMaterialList() {
-    return ListView.builder(
-      itemCount: existingFiles.length,
-      itemBuilder: (context, index) {
-        return ListTile(
-          title: Text(existingFiles[index]),
-          trailing: IconButton(
-            icon: const Icon(CupertinoIcons.down_arrow),
-            onPressed: () => downloadFile(existingFiles[index]),
-          ),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: loadExistingFiles,
+      child: existingFiles.isEmpty
+          ? Center(child: Text('No study materials available'))
+          : ListView.builder(
+        itemCount: existingFiles.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text(existingFiles[index]),
+            trailing: IconButton(
+              icon: const Icon(CupertinoIcons.down_arrow),
+              onPressed: () => downloadFile(existingFiles[index]),
+            ),
+          );
+        },
+      ),
     );
-  }
-
-  Future<void> loadExistingFiles() async {
-    try {
-      final listRef = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass");
-      final firebase_storage.ListResult result = await listRef.listAll();
-      setState(() {
-        existingFiles = result.items.map((item) => item.name).toList();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading files: $e')),
-      );
-    }
-  }
-
-  Future<File?> downloadFile(String fileName) async {
-    try {
-      // Get a reference to the file
-      final ref = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$fileName/");
-
-      // Create a temporary directory to store the downloaded file
-      late Directory tempDir;
-      tempDir = await getTemporaryDirectory();
-      final String tempFilePath = '${tempDir.path}/$fileName';
-
-      // Download the file to the temporary directory
-      await ref.writeToFile(File(tempFilePath));
-
-      // Define a path in the application documents directory
-      final Directory appDocDir = await getApplicationDocumentsDirectory();
-      final String appDocPath = '${appDocDir.path}/$fileName';
-
-      // Move the file from the temporary directory to the permanent directory
-      final File tempFile = File(tempFilePath);
-      await tempFile.copy(appDocPath);
-
-      // Delete the temporary file
-      await tempFile.delete();
-
-      // Return the file path of the downloaded file in the permanent directory
-      return File(appDocPath);
-    } catch (e) {
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading files: $e')),
-      );
-      return null;
-    }
   }
 }

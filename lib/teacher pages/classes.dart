@@ -325,6 +325,7 @@ class _PiyushClassesState extends State<PiyushClasses> {
               },
             ),
           );
+          const Divider();
         },
       );
     } else if (dropdownValueOption == "Meeting Link") {
@@ -363,23 +364,27 @@ class _PiyushClassesState extends State<PiyushClasses> {
             String pin = doc['Password'];
             return Container(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title),
-                  Text(link),
-                  Text(fromTime),
-                  Text(toTime),
+                  Text("Topic: $title"),
+                  const SizedBox(height: 10,),
+                  Text("Meeting Link: $link"),
+                  const SizedBox(height: 10,),
+                  Text("Starts from: $fromTime"),
+                  const SizedBox(height: 10,),
+                  Text("Ends on: $toTime"),
                   Row(
                     children: [
-                      Text(pin),
+                      Text("Password: $pin"),
                       IconButton(
                         onPressed: () async {
-                          deleteExistingFile(item);
-                        };
+                          await deleteExistingLink(doc.id);
+                        },
                         icon: const Icon(CupertinoIcons.delete),
                       )
                     ],
-                  )
+                  ),
+                  const Divider(),
                 ],
               ),
             );
@@ -402,20 +407,35 @@ class _PiyushClassesState extends State<PiyushClasses> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('File deleted successfully')),
         );
-      } else if (dropdownValueOption == "Meeting Link") {
-        await FirebaseFirestore.instance
-            .collection("Meeting Links")
-            .doc(courseController.text)
-            .collection("Links")
-            .doc(itemName)
-            .delete();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Link deleted successfully')),
-        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting item: $e')),
+        SnackBar(content: Text('Error deleting file: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> deleteExistingLink(String docId) async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+      await FirebaseFirestore.instance
+          .collection("Meeting Links")
+          .doc(courseController.text)
+          .collection("Links")
+          .doc(docId)
+          .delete();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Link deleted successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting link: $e')),
       );
     } finally {
       setState(() {
