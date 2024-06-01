@@ -72,7 +72,7 @@ class _StudyMaterialState extends State<StudyMaterial> {
     }
   }
 
-  Future<File?> downloadFile(String fileName) async {
+  Future<void> downloadFile(String fileName) async {
     try {
       final ref = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass/$fileName");
       final Directory tempDir = await getTemporaryDirectory();
@@ -83,12 +83,14 @@ class _StudyMaterialState extends State<StudyMaterial> {
       final File tempFile = File(tempFilePath);
       await tempFile.copy(appDocPath);
       await tempFile.delete();
-      return File(appDocPath);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('File downloaded to $appDocPath')),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error downloading file: $e')),
       );
-      return null;
     }
   }
 
@@ -119,7 +121,7 @@ class _StudyMaterialState extends State<StudyMaterial> {
     return RefreshIndicator(
       onRefresh: loadExistingFiles,
       child: existingFiles.isEmpty
-          ? Center(child: Text('No study materials available'))
+          ? const Center(child: Text('No study materials available'))
           : ListView.builder(
         itemCount: existingFiles.length,
         itemBuilder: (context, index) {

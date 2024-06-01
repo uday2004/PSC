@@ -1,9 +1,12 @@
+import 'package:flutter/material.dart';
+
 class MeetingLink{
   final String meetingLink;
-  final String fromTime;
-  final String toTime;
+  final TimeOfDay fromTime;
+  final TimeOfDay toTime;
   final String password;
   final String topic;
+  final DateTime date;
 
   const MeetingLink({
     required this.meetingLink,
@@ -11,11 +14,13 @@ class MeetingLink{
     required this.toTime,
     required this.password,
     required this.topic,
+    required this.date,
 });
 
   toJson(){
     return{
       "Meeting Link": meetingLink,
+      "Date": date,
       "From": fromTime,
       "To": toTime,
       "Password": password,

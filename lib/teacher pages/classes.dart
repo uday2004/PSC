@@ -20,16 +20,15 @@ class PiyushClasses extends StatefulWidget {
 
 class _PiyushClassesState extends State<PiyushClasses> {
   TextEditingController courseController = TextEditingController();
-  String dropdownValue = list.first;
-  static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
-
   TextEditingController optionController = TextEditingController();
+  String dropdownValue = list.first;
   String dropdownValueOption = listOption.first;
+  bool isLoading = false;
+
+  static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
   static const List<String> listOption = <String>['Recorded Classes', 'Meeting Link'];
 
   final linkRepo = Get.put(MeetingLinkRepository());
-
-  bool isLoading = false;
 
   @override
   void initState() {
@@ -197,9 +196,14 @@ class _PiyushClassesState extends State<PiyushClasses> {
   Future<void> openDialog() async {
     TextEditingController titleController = TextEditingController();
     TextEditingController linkController = TextEditingController();
+    TextEditingController passwordController = TextEditingController();
     TextEditingController fromTimeController = TextEditingController();
     TextEditingController toTimeController = TextEditingController();
-    TextEditingController passwordController = TextEditingController();
+    TextEditingController dateController = TextEditingController();
+
+    TimeOfDay? fromTime;
+    TimeOfDay? toTime;
+    DateTime? selectedDate;
 
     await showDialog(
       context: context,
@@ -213,16 +217,73 @@ class _PiyushClassesState extends State<PiyushClasses> {
               decoration: const InputDecoration(hintText: 'Title'),
             ),
             TextField(
+              controller: dateController,
+              decoration: InputDecoration(
+                hintText: 'Date',
+                prefixIcon: IconButton(
+                  onPressed: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2024),
+                      lastDate: DateTime(2050),
+                    );
+                    if (pickedDate != null) {
+                      setState(() {
+                        selectedDate = pickedDate;
+                        dateController.text = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+                      });
+                    }
+                  },
+                  icon: const Icon(CupertinoIcons.calendar),
+                ),
+              ),
+            ),
+            TextField(
               controller: linkController,
               decoration: const InputDecoration(hintText: 'Link'),
             ),
             TextField(
               controller: fromTimeController,
-              decoration: const InputDecoration(hintText: 'Class starts from'),
+              decoration: InputDecoration(
+                hintText: 'Class starts from',
+                prefixIcon: IconButton(
+                  onPressed: () async {
+                    TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        fromTime = pickedTime;
+                        fromTimeController.text = pickedTime.format(context);
+                      });
+                    }
+                  },
+                  icon: const Icon(CupertinoIcons.clock),
+                ),
+              ),
             ),
             TextField(
               controller: toTimeController,
-              decoration: const InputDecoration(hintText: 'Class ends by'),
+              decoration: InputDecoration(
+                hintText: 'Class ends by',
+                prefixIcon: IconButton(
+                  onPressed: () async {
+                    TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        toTime = pickedTime;
+                        toTimeController.text = pickedTime.format(context);
+                      });
+                    }
+                  },
+                  icon: const Icon(CupertinoIcons.clock),
+                ),
+              ),
             ),
             TextField(
               controller: passwordController,
@@ -241,16 +302,22 @@ class _PiyushClassesState extends State<PiyushClasses> {
             onPressed: () async {
               String title = titleController.text.trim();
               String link = linkController.text.trim();
-              String fromTime = fromTimeController.text.trim();
-              String toTime = toTimeController.text.trim();
               String password = passwordController.text.trim();
-              if (title.isNotEmpty && link.isNotEmpty && toTime.isNotEmpty && fromTime.isNotEmpty && password.isNotEmpty) {
+
+              // Check for non-null values before proceeding
+              if (title.isNotEmpty &&
+                  link.isNotEmpty &&
+                  fromTime != null &&
+                  toTime != null &&
+                  password.isNotEmpty &&
+                  selectedDate != null) {
                 final meetingLink = MeetingLink(
                   topic: title,
                   meetingLink: link,
-                  fromTime: fromTime,
-                  toTime: toTime,
+                  fromTime: fromTime!,
+                  toTime: toTime!,
                   password: password,
+                  date: selectedDate!,
                 );
                 String uid = courseController.text.trim();
                 await linkRepo.createLink(meetingLink, uid);
@@ -325,13 +392,10 @@ class _PiyushClassesState extends State<PiyushClasses> {
               },
             ),
           );
-          const Divider();
         },
       );
     } else if (dropdownValueOption == "Meeting Link") {
-      return Container(
-        child: lookDisplay(),
-      );
+      return lookDisplay();
     } else {
       return const SizedBox.shrink();
     }
@@ -363,15 +427,16 @@ class _PiyushClassesState extends State<PiyushClasses> {
             String toTime = doc['To'];
             String pin = doc['Password'];
             return Container(
+              margin: const EdgeInsets.symmetric(vertical: 8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("Topic: $title"),
-                  const SizedBox(height: 10,),
+                  const SizedBox(height: 10),
                   Text("Meeting Link: $link"),
-                  const SizedBox(height: 10,),
+                  const SizedBox(height: 10),
                   Text("Starts from: $fromTime"),
-                  const SizedBox(height: 10,),
+                  const SizedBox(height: 10),
                   Text("Ends on: $toTime"),
                   Row(
                     children: [

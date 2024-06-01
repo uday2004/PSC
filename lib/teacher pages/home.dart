@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:psc/teacher%20pages/settings.dart';
 import 'package:psc/teacher%20pages/study_material.dart';
 import 'assignment.dart';
-import 'chats.dart';
 import 'classes.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'fees.dart';
 
 class Piyush_Home extends StatefulWidget {
   const Piyush_Home({super.key});
@@ -51,7 +52,7 @@ class _Piyush_HomeState extends State<Piyush_Home> {
           HomePageContent(context),
           const PiyushAssignment(),
           const PiyushClasses(),
-          const Piyush_Chats(),
+          const Piyush_Fees(),
           const PiyushStudyMaterial(),
         ],
       ),
@@ -260,8 +261,8 @@ class CustBottomBar extends StatelessWidget {
           label: 'Meeting',
         ),
         BottomNavigationBarItem(
-          icon: Icon(CupertinoIcons.chat_bubble),
-          label: 'Chats',
+          icon: Icon(Icons.currency_rupee),
+          label: 'Fees',
         ),
         BottomNavigationBarItem(
           icon: Icon(CupertinoIcons.book),

@@ -6,11 +6,11 @@ import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:psc/student%20pages/fees.dart';
 import 'package:psc/student%20pages/setting.dart' as psc_settings;
 import 'package:psc/student%20pages/study_material.dart';
-import 'chats.dart';
 import 'classes.dart';
-import 'notification.dart' as my_app_notification;
+import 'notification.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -116,8 +116,8 @@ class _HomePageState extends State<HomePage> {
         children: [
           HomePageContent(context),
           const Classes(),
-          const Chats(),
           const StudyMaterial(),
+          const Fees(),
         ],
       ),
       bottomNavigationBar: CustBottomBar(
@@ -213,12 +213,12 @@ class CustBottomBar extends StatelessWidget {
           label: 'Meeting',
         ),
         BottomNavigationBarItem(
-          icon: Icon(CupertinoIcons.chat_bubble),
-          label: 'Chats',
-        ),
-        BottomNavigationBarItem(
           icon: Icon(CupertinoIcons.book),
           label: 'Material',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.currency_rupee),
+          label: 'Fees',
         ),
       ],
       selectedItemColor: Colors.orangeAccent,  // Customize the selected item text color
@@ -254,7 +254,7 @@ class CustAppBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) {
-                return const my_app_notification.Notification();
+                return const Notification_Screen();
               }));
             },
             icon: const Icon(Icons.notifications)),
