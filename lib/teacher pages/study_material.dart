@@ -15,8 +15,17 @@ class PiyushStudyMaterial extends StatefulWidget {
 
 class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   TextEditingController courseController = TextEditingController();
+  TextEditingController boardController = TextEditingController();
+  TextEditingController subjectController = TextEditingController();
+
   String dropdownValue = list.first;
+  String dropdownValueSubject = listSubject.first;
+  String dropdownValueBoard = listBoard.first;
+
   static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
+  static const List<String> listBoard = <String>['ISC', 'CBSE', 'West Bengal'];
+  static const List<String> listSubject = <String>['Mathematics', 'Economics'];
+
   bool isLoading = false;
 
   @override
@@ -58,6 +67,52 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                 }).toList(),
                 value: dropdownValue,
               ),
+              if(courseController.text == "Class 11" || courseController.text == "Class 12") ...[
+                DropdownButton<String>(
+                  isExpanded: true,
+                  icon: const Icon(Icons.arrow_downward),
+                  elevation: 16,
+                  underline: Container(
+                    height: 2,
+                    color: Colors.orangeAccent,
+                  ),
+                  onChanged: (String? value) {
+                    setState(() {
+                      dropdownValueSubject = value!;
+                      subjectController.text = value;
+                    });
+                  },
+                  items: listSubject.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  value: dropdownValueSubject,
+                ),
+                DropdownButton<String>(
+                  isExpanded: true,
+                  icon: const Icon(Icons.arrow_downward),
+                  elevation: 16,
+                  underline: Container(
+                    height: 2,
+                    color: Colors.orangeAccent,
+                  ),
+                  onChanged: (String? value) {
+                    setState(() {
+                      dropdownValueBoard = value!;
+                      boardController.text = value;
+                    });
+                  },
+                  items: listBoard.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  value: dropdownValueBoard,
+                ),
+              ],
               const SizedBox(height: 20),
               const Text(
                 "Uploaded Files:",
@@ -146,7 +201,7 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
         if (fileBytes != null) {
           final ref = FirebaseStorage.instance
               .ref()
-              .child("Study Material/${courseController.text}/${file.name}");
+              .child("Study Material/${courseController.text}/${boardController.text}/${subjectController.text}/${file.name}");
           await ref.putData(fileBytes);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('File uploaded successfully')),
@@ -174,7 +229,7 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
 
   Future<List<String>> _loadExistingFiles() async {
     try {
-      final listRef = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}");
+      final listRef = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/${boardController.text}/${subjectController.text}");
       final ListResult result = await listRef.listAll();
       return result.items.map((item) => item.name).toList();
     } catch (e) {
@@ -190,7 +245,7 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
       setState(() {
         isLoading = true;
       });
-      final ref = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/$fileName");
+      final ref = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/${boardController.text}/${subjectController.text}/$fileName");
       await ref.delete();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('File deleted successfully')),

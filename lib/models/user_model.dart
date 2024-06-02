@@ -5,7 +5,8 @@ class UserModel{
   final String course;
   final String password;
   final String status;
-  final List<String> groupId;
+  final String board;
+  final String subject;
 
   const UserModel({
     required this.fName,
@@ -14,7 +15,8 @@ class UserModel{
     required this.course,
     required this.password,
     required this.status,
-    required this.groupId,
+    required this.board,
+    required this.subject,
 });
   toJson(){
     return{
@@ -25,7 +27,8 @@ class UserModel{
       "role": "Student",
       "Status": "Waiting",
       "password": password,
-      "Group ID": groupId
+      "Board": board,
+      "Subject": subject
     };
   }
 }
