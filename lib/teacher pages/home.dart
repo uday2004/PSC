@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:psc/teacher%20pages/notification.dart';
+import 'package:psc/teacher%20pages/personal%20info.dart';
 import 'package:psc/teacher%20pages/settings.dart';
 import 'package:psc/teacher%20pages/study_material.dart';
 import 'assignment.dart';
@@ -122,6 +124,11 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                               final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
 
                               return ListTile(
+                                onTap: (){
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                                    return const PersonalInfo();
+                                  }));
+                                },
                                 title: Text(name),
                                 subtitle: Text(email ?? ''),
                                 trailing: Row(
@@ -198,6 +205,11 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                               final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
 
                               return ListTile(
+                                onTap: (){
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) {
+                                    return const PersonalInfo();
+                                  }));
+                                },
                                 title: Text(name),
                                 subtitle: Text(email ?? ''),
                                 trailing: IconButton(
@@ -299,6 +311,13 @@ class CustAppBar extends StatelessWidget implements PreferredSizeWidget {
               }));
             },
             icon: const Icon(Icons.settings)),
+        IconButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return const NotificationPiyush();
+              }));
+            },
+            icon: const Icon(Icons.notifications)),
       ],
     );
   }

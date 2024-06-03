@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:psc/teacher%20pages/change%20fees.dart';
+import 'package:psc/teacher%20pages/removed%20student.dart';
+import 'package:psc/teacher%20pages/test%20mode.dart';
 
 import '../logIn/log_in.dart';
 import '../theme/theme.dart';
@@ -29,51 +31,97 @@ class Piyush_Settings extends StatelessWidget {
       ),
       body:  Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
-          return Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Theme',
-                    style: TextStyle(
-                        fontSize: 18
-                    ),
-                  ),
-                  Switch(
-                    value: themeProvider.themeData == darkMode,
-                    onChanged: (value) {
-                      themeProvider.toggleTheme();
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                TextButton(
+                    onPressed: (){
+                      Navigator.push(context, MaterialPageRoute(builder: (context) {
+                        return const RemovedStudents();
+                      }));
                     },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20,),
-              TextButton(onPressed: () async {
-                try {
-                  // Sign the user out
-                  await FirebaseAuth.instance.signOut();
-                  // Navigate back to the sign-in/log-in screen
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LogIn()),
-                  );
-                } catch (e) {
-                  // Handle sign-out errors
-                  if (kDebugMode) {
-                    print('Error signing out: $e');
-                  }
-                }
-              },
-                style: ButtonStyle(
-                  foregroundColor: MaterialStateProperty.all<Color>(Colors.red),
-                  backgroundColor: MaterialStateProperty.all<Color>(Theme.of(context).colorScheme.secondary),
-                  padding: MaterialStateProperty.all<EdgeInsetsGeometry>(const EdgeInsets.all(10)),
+                    child:const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Removed Student",textAlign: TextAlign.left,style: TextStyle(color: Colors.black,fontSize: 18),),
+                        Icon(Icons.arrow_forward_ios,color: Colors.black,),
+                      ],
+                    )
                 ),
-                child: const Text('Log Out'),
-              ),
-            ],
+                TextButton(
+                    onPressed: (){
+                      Navigator.push(context, MaterialPageRoute(builder: (context) {
+                        return const TestMode();
+                      }));
+                    },
+                    child:const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Test Mode",textAlign: TextAlign.left,style: TextStyle(color: Colors.black,fontSize: 18),),
+                        Icon(Icons.arrow_forward_ios,color: Colors.black,),
+                      ],
+                    )
+                ),
+                TextButton(
+                    onPressed: (){
+                      Navigator.push(context, MaterialPageRoute(builder: (context) {
+                        return const ChangeFees();
+                      }));
+                    },
+                    child:const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Fees",textAlign: TextAlign.left,style: TextStyle(color: Colors.black,fontSize: 18),),
+                        Icon(Icons.arrow_forward_ios,color: Colors.black,),
+                      ],
+                    )
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Theme',
+                      style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 18
+                      ),
+                    ),
+                    Switch(
+                      value: themeProvider.themeData == darkMode,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20,),
+                TextButton(onPressed: () async {
+                  try {
+                    // Sign the user out
+                    await FirebaseAuth.instance.signOut();
+                    // Navigate back to the sign-in/log-in screen
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LogIn()),
+                    );
+                  } catch (e) {
+                    // Handle sign-out errors
+                    if (kDebugMode) {
+                      print('Error signing out: $e');
+                    }
+                  }
+                },
+                  style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all<Color>(Colors.red),
+                    backgroundColor: MaterialStateProperty.all<Color>(Theme.of(context).colorScheme.secondary),
+                    padding: MaterialStateProperty.all<EdgeInsetsGeometry>(const EdgeInsets.all(10)),
+                  ),
+                  child: const Text('Log Out'),
+                ),
+              ],
+            ),
           );
         },
       ),

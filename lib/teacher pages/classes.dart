@@ -21,12 +21,23 @@ class PiyushClasses extends StatefulWidget {
 class _PiyushClassesState extends State<PiyushClasses> {
   TextEditingController courseController = TextEditingController();
   TextEditingController optionController = TextEditingController();
+  TextEditingController subjectController = TextEditingController();
+  TextEditingController boardController = TextEditingController();
+
   String dropdownValue = list.first;
+  String dropdownValueSubject = listOptionBoard.first;
+  String dropdownValueBoard = listOptionSubjet.first;
+
   String dropdownValueOption = listOption.first;
+  String dropdownValueOptionSubject = listOptionSubjet.first;
+  String dropdownValueOptionBoard = listOptionBoard.first;
+
   bool isLoading = false;
 
   static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
   static const List<String> listOption = <String>['Recorded Classes', 'Meeting Link'];
+  static const List<String> listOptionSubjet = <String>['Economics', 'Mathematics'];
+  static const List<String> listOptionBoard = <String>['ISC', 'CBSE', 'West Bengal'];
 
   final linkRepo = Get.put(MeetingLinkRepository());
 
@@ -41,8 +52,7 @@ class _PiyushClassesState extends State<PiyushClasses> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,
-      body: Stack(
-        children: [
+      body:
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(
@@ -92,6 +102,56 @@ class _PiyushClassesState extends State<PiyushClasses> {
                   value: dropdownValueOption,
                 ),
                 const SizedBox(height: 15),
+                if(courseController.text == 'Class 11' || courseController.text =='Class 12') ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      DropdownButton<String>(
+                        icon: const Icon(Icons.arrow_downward),
+                        elevation: 16,
+                        underline: Container(
+                          height: 2,
+                          color: Colors.orangeAccent,
+                        ),
+                        onChanged: (String? value) {
+                          setState(() {
+                            dropdownValueBoard = value!;
+                            boardController.text = value;
+                          });
+                        },
+                        items: listOptionBoard.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        value: dropdownValueBoard,
+                      ),
+                      DropdownButton<String>(
+                        icon: const Icon(Icons.arrow_downward),
+                        elevation: 16,
+                        underline: Container(
+                          height: 2,
+                          color: Colors.orangeAccent,
+                        ),
+                        onChanged: (String? value) {
+                          setState(() {
+                            dropdownValueOptionSubject = value!;
+                            subjectController.text = value;
+                          });
+                        },
+                        items: listOptionSubjet.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        value: dropdownValueOptionSubject,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 15,)
+                ],
                 Text(optionController.text, style: const TextStyle(fontSize: 20)),
                 const SizedBox(height: 10),
                 isLoading
@@ -117,13 +177,7 @@ class _PiyushClassesState extends State<PiyushClasses> {
               ],
             ),
           ),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: _uploadMediaButton(context),
-          ),
-        ],
-      ),
+          floatingActionButton: _uploadMediaButton(context),
     );
   }
 
@@ -366,7 +420,7 @@ class _PiyushClassesState extends State<PiyushClasses> {
 
   Future<List<String>> _loadExistingFiles() async {
     try {
-      final listRef = FirebaseStorage.instance.ref().child("Recorded Classes/${courseController.text}");
+      final listRef = FirebaseStorage.instance.ref().child("Recorded Classes/${courseController.text}/${boardController.text}/${subjectController.text}");
       final ListResult result = await listRef.listAll();
       return result.items.map((item) => item.name).toList();
     } catch (e) {
@@ -467,7 +521,7 @@ class _PiyushClassesState extends State<PiyushClasses> {
       if (dropdownValueOption == "Recorded Classes") {
         final ref = FirebaseStorage.instance
             .ref()
-            .child("Recorded Classes/${courseController.text}/$itemName");
+            .child("Recorded Classes/${courseController.text}/${boardController.text}/${subjectController.text}/$itemName");
         await ref.delete();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('File deleted successfully')),
