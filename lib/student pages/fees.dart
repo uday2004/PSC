@@ -46,16 +46,17 @@ class _FeesState extends State<Fees> {
               String title = doc['Month'];
               String course = doc['Course'];
               String sub = doc['Subject'];
+              String status = doc['Status'];
 
               return ListView(
-                shrinkWrap: true, // Make the ListView take only the needed height
+                shrinkWrap: true,
                 children: [
                   ListTile(
-                    title: Text("Month: $title"),
+                    title: Text("Month: $title $sub $course"),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('$course ($sub)'),
+                        Text(status),
                         const Divider(),
                       ],
                     ),
@@ -102,12 +103,15 @@ class _FeesState extends State<Fees> {
                           var userDoc = userSnapshot.data!;
                           String title = userDoc['Month'];
                           String status = userDoc['Status'];
+                          String sub = userDoc['Subject'];
+                          String course = userDoc['Course'];
+                          String fees = userDoc['Fees'];
                           return ListTile(
-                            title: Text("Topic: $title"),
+                            title: Text("Topic: $title $sub $course"),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(status),
+                                Text('$status ₹ $fees'),
                                 const Divider(),
                               ],
                             ),

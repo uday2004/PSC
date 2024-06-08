@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -20,7 +21,11 @@ class _ChangeFeesState extends State<ChangeFees> {
   String dropdownValueSubject = subjectList.first;
   String dropdownValueMonth = monthList.first;
 
-  static const List<String> classList = <String>['Class 11', 'Class 12', 'CA Foundation'];
+  static const List<String> classList = <String>[
+    'Class 11',
+    'Class 12',
+    'CA Foundation'
+  ];
   static const List<String> subjectList = <String>['Economics', 'Mathematics'];
   static const List<String> monthList = <String>[
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -67,7 +72,8 @@ class _ChangeFeesState extends State<ChangeFees> {
             });
           },
         ),
-        if (classController.text == 'Class 12' || classController.text == 'Class 11') ...[
+        if (classController.text == 'Class 12' ||
+            classController.text == 'Class 11') ...[
           const SizedBox(height: 20),
           buildDropdownButton(
             value: dropdownValueSubject,
@@ -130,34 +136,87 @@ class _ChangeFeesState extends State<ChangeFees> {
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: saveFees,
-          child: const Text('Save', style: TextStyle(color: Colors.orangeAccent)),
+          child: const Text(
+              'Save', style: TextStyle(color: Colors.orangeAccent)),
         ),
       ],
     );
   }
 
   void saveFees() async {
-    if (classController.text.isNotEmpty && feesController.text.isNotEmpty) {
-      final fees = int.tryParse(feesController.text);
-      if (fees != null) {
-        final docRef = FirebaseFirestore.instance.collection('Fees').doc(classController.text);
-        final data = classController.text == 'Class 11' || classController.text == 'Class 12'
-            ? {subjectController.text: fees}
-            : {'Mathematics': fees};
-        await docRef.set(data, SetOptions(merge: true));
-        feesController.clear();
+    // Check if class or fees is empty
+    if (classController.text.isEmpty || feesController.text.isEmpty) {
+      Get.snackbar(
+        "Error", "Class or Fees cannot be empty",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // Parse fees to an integer
+    final fees = int.tryParse(feesController.text);
+    if (fees == null) {
+      Get.snackbar(
+        "Error", "Invalid fee value",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      // Prepare data to be saved
+      final docRef = FirebaseFirestore.instance.collection('Fees').doc(classController.text);
+      Map<String, dynamic> data;
+
+      // Check if class is Class 11 or Class 12
+      if (classController.text == 'Class 11' || classController.text == 'Class 12') {
+        // Retrieve old fees from Firestore
+        final docSnapshot = await docRef.get();
+        final oldData = docSnapshot.data() as Map<String, dynamic>?;
+
+        // Include old fees if available
+        int oldMathFees = oldData?['Mathematics'] ?? 0;
+        int oldEconFees = oldData?['Economics'] ?? 0;
+
+        // Include fees for both Mathematics and Economics
+        data = {
+          'Mathematics': subjectController.text == 'Mathematics' ? fees : oldMathFees,
+          'Economics': subjectController.text == 'Economics' ? fees : oldEconFees,
+        };
+
+        // Calculate total fees for both subjects
+        int totalFees = data['Mathematics'] + data['Economics'];
+        data['Both(Maths & Economics)'] = totalFees;
       } else {
-        const Center(child: Text('Invalid fee value'));
+        // For other classes, include fees only for Mathematics
+        data = {'Mathematics': fees};
       }
-    } else {
-      const Center(child: Text('Class or Fees is empty'));
+
+      // Save data to Firestore
+      await docRef.set(data, SetOptions(merge: true));
+
+      // Clear input fields
+      feesController.clear();
+
+      // Show success message
+      Get.snackbar(
+        "Success", "Fees saved successfully",
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }catch (e) {
+      // Show error message
+      Get.snackbar(
+        "Error", "Failed to save fees: $e",
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
   Widget buildDueFeesButton() {
     return ElevatedButton(
       onPressed: openDialog,
-      child: const Text('Due fees', style: TextStyle(color: Colors.orangeAccent)),
+      child: const Text(
+          'Due fees', style: TextStyle(color: Colors.orangeAccent)),
     );
   }
 
@@ -210,52 +269,93 @@ class _ChangeFeesState extends State<ChangeFees> {
 
   Future<void> dueFeesRequest() async {
     try {
-      // Create a map to accumulate all the data
       Map<String, dynamic> allData = {};
 
-      QuerySnapshot feesQuerySnapshot = await FirebaseFirestore.instance.collection('Fees').get();
+      // Fetch all fees data
+      QuerySnapshot feesQuerySnapshot =
+      await FirebaseFirestore.instance.collection('Fees').get();
 
-      // Process the fetched fees data
+      // Accumulate fees data
       for (var feesDoc in feesQuerySnapshot.docs) {
-        Map<String, dynamic> feesData = feesDoc.data() as Map<String, dynamic>;
+        Map<String, dynamic> feesData =
+        feesDoc.data() as Map<String, dynamic>;
         String className = feesDoc.id;
 
-        // Add the fees data to the accumulated map
         allData[className] = feesData;
       }
 
-      // Save the accumulated fees data
+      // Get the current year
       int year = DateTime.now().year;
-      final db = FirebaseFirestore.instance.collection('Fees_due').doc('${monthController.text.trim()}_$year');
+
+      // Reference to the Fees_due collection
+      final db = FirebaseFirestore.instance
+          .collection('Fees_due')
+          .doc('${monthController.text.trim()}_$year');
+
+      // Save all accumulated fees data
       await db.set(allData, SetOptions(merge: true));
 
-      // Fetch and add user data to the sub-collection
-      QuerySnapshot usersQuerySnapshot = await FirebaseFirestore.instance.collection('Users').get();
+      // Fetch all users data
+      QuerySnapshot usersQuerySnapshot =
+      await FirebaseFirestore.instance.collection('Users').get();
 
+      // Process each user
       for (var userDoc in usersQuerySnapshot.docs) {
-        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        Map<String, dynamic> userData =
+        userDoc.data() as Map<String, dynamic>;
         String userUid = userDoc.id;
 
-        if(userData['Status'] == 'Active' && userData['role'] == 'Student'){
-          // Add user data to the sub-collection
-          await db.collection('Users').doc(userUid).set({
+        // Check if user is active student
+        if (userData['Status'] == 'Active' && userData['role'] == 'Student') {
+          String course = userData['Course'];
+          String subject;
+
+          // Set subject based on course
+          if (userData['Subject'] == 'CA Foundation') {
+            subject = 'Mathematics';
+          } else {
+            subject = userData['Subject'];
+          }
+
+          int fees;
+
+          // Check if the subject is available in the fees data
+          if (allData.containsKey(course) &&
+              allData[course].containsKey(subject)) {
+            fees = allData[course][subject];
+          } else {
+            // If subject not found, set fees to 0
+            fees = 0;
+            print('Fees data not available for $subject in $course');
+            print('Skipping user $userUid due to null fees data');
+            continue; // Skip to the next user
+          }
+
+          // Reference to the user's document under Fees_due collection
+          final userDocRef = db.collection('Users').doc(userUid);
+
+          // Save the fees for the user under Fees_due collection
+          await userDocRef.set({
             'Name': '${userData['First Name']} ${userData['Last Name']}',
-            'Course': userData['Course'],
-            'Subject': userData['Subject'],
+            'Course': course,
+            'Subject': subject,
             'Month': '${monthController.text.trim()}_$year',
             'UID': userUid,
+            'Fees': fees,
             'Status': 'Pending',
           });
         }
       }
 
+      // Show success message
       Get.snackbar(
         "Success", "Fees made due",
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (e) {
+      // Show error message
       Get.snackbar(
-        "Failed", "Unable to due fees",
+        "Failed", "Unable to due fees. Error: ${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -285,8 +385,12 @@ class _ChangeFeesState extends State<ChangeFees> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (data['Economics'] != null) Text('Economics: ₹${data['Economics']}'),
-                    if (data['Mathematics'] != null) Text('Mathematics: ₹${data['Mathematics']}'),
+                    if (data['Economics'] != null) Text(
+                        'Economics: ₹${data['Economics']}'),
+                    if (data['Mathematics'] != null) Text(
+                        'Mathematics: ₹${data['Mathematics']}'),
+                    if (data['Both(Maths & Economics)'] != null) Text(
+                        'Both: ₹${data['Mathematics']+data['Economics']}'),
                   ],
                 ),
               );
@@ -296,4 +400,5 @@ class _ChangeFeesState extends State<ChangeFees> {
       ),
     );
   }
+
 }
