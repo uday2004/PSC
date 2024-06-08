@@ -18,8 +18,11 @@ class _ClassesState extends State<Classes> {
   String dropDownValue = list.first;
   static const List<String> list = <String>['Recorded Classes', 'Meeting Link'];
 
-  late String userClass;
+  late String userClass = '';
+  late String userSub = '';
+  late String userBoard = '';
   bool isLoading = true;
+  List<String> existingFiles = [];
 
   @override
   void initState() {
@@ -31,19 +34,76 @@ class _ClassesState extends State<Classes> {
     String? uid = FirebaseAuth.instance.currentUser?.uid;
 
     if (uid != null) {
-      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(uid)
-          .get();
+      try {
+        DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(uid)
+            .get();
 
-      Map<String, dynamic>? userData = docSnapshot.data() as Map<String, dynamic>?;
+        Map<String, dynamic>? userData = docSnapshot.data() as Map<String, dynamic>?;
 
-      if (userData != null) {
-        setState(() {
-          userClass = userData['Course'];
-          isLoading = false;
-        });
+        if (userData != null) {
+          setState(() {
+            userClass = userData['Course'];
+            userSub = userData['Subject'];
+            userBoard = userData['Board'];
+            isLoading = false;
+          });
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching user data: $e')),
+        );
       }
+    }
+  }
+
+  Future<void> loadExistingFiles() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final listRef = firebase_storage.FirebaseStorage.instance
+          .ref()
+          .child("Recorded Classes/$userClass");
+
+      final firebase_storage.ListResult result = await listRef.listAll();
+      setState(() {
+        existingFiles = result.items.map((item) => item.name).toList();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading files: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> downloadFile(String fileName) async {
+    try {
+      final ref = firebase_storage.FirebaseStorage.instance
+          .ref()
+          .child("Recorded Classes/$userClass/$fileName");
+      final Directory tempDir = await getTemporaryDirectory();
+      final String tempFilePath = '${tempDir.path}/$fileName';
+      await ref.writeToFile(File(tempFilePath));
+      final Directory appDocDir = await getApplicationDocumentsDirectory();
+      final String appDocPath = '${appDocDir.path}/$fileName';
+      final File tempFile = File(tempFilePath);
+      await tempFile.copy(appDocPath);
+      await tempFile.delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('File downloaded to $appDocPath')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error downloading file: $e')),
+      );
     }
   }
 
@@ -233,7 +293,7 @@ class _ClassesState extends State<Classes> {
         const SnackBar(content: Text('File downloaded successfully')),
       );
     } catch (e) {
-      print(e);
+      Text(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error downloading file: $e')),
       );

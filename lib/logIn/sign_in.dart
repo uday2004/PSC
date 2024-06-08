@@ -36,7 +36,7 @@ class _SignInState extends State<SignIn> {
 
   static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
   static const List<String> listBoard = <String>['ISC', 'CBSE', 'West Bengal'];
-  static const List<String> listSubject = <String>['Mathematics', 'Economics', 'Both(Maths & Economics)', 'CA Foundation'];
+  static const List<String> listSubject = <String>['Mathematics', 'Economics', 'Both(Maths & Economics)'];
 
   Future<void> createUser(UserModel user) async {
     showDialog(

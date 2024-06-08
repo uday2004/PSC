@@ -20,7 +20,7 @@ class MeetingLinkRepository extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
         );
       });
-    } catch (error, stackTrace) {
+    } catch (error) {
       Get.snackbar(
         "Error", "Try again later",
         snackPosition: SnackPosition.BOTTOM,

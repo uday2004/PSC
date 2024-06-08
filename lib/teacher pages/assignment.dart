@@ -121,7 +121,7 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
                   stream: _fileListStream(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
+                      return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
                       return const Text('Error loading files');

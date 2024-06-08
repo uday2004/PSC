@@ -15,9 +15,12 @@ class StudyMaterial extends StatefulWidget {
 }
 
 class _StudyMaterialState extends State<StudyMaterial> {
-  late String userClass;
+  late String userClass = '';
+  late String userSub = '';
+  late String userBoard = '';
   List<String> existingFiles = [];
   bool isLoading = false;
+  String currentSubject = '';
 
   @override
   void initState() {
@@ -40,6 +43,8 @@ class _StudyMaterialState extends State<StudyMaterial> {
         if (userData != null) {
           setState(() {
             userClass = userData['Course'];
+            userSub = userData['Subject'];
+            userBoard = userData['Board'];
           });
           loadExistingFiles(); // Load existing files once user class is fetched
         }
@@ -51,16 +56,42 @@ class _StudyMaterialState extends State<StudyMaterial> {
     }
   }
 
-  Future<void> loadExistingFiles() async {
+  Future<void> loadExistingFiles({String subject = ''}) async {
     try {
       setState(() {
         isLoading = true;
+        currentSubject = subject;
       });
-      final listRef = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass");
-      final firebase_storage.ListResult result = await listRef.listAll();
-      setState(() {
-        existingFiles = result.items.map((item) => item.name).toList();
-      });
+
+      final List<firebase_storage.Reference> references = [];
+
+      if (userClass == 'Class 11' || userClass == 'Class 12') {
+        if (subject.isNotEmpty) {
+          references.add(firebase_storage.FirebaseStorage.instance
+              .ref()
+              .child("Study Material/$userClass/$userBoard/$subject"));
+        } else if (userSub == 'Economics' || userSub == 'Mathematics') {
+          references.add(firebase_storage.FirebaseStorage.instance
+              .ref()
+              .child("Study Material/$userClass/$userBoard/$userSub"));
+        } else if (userSub == 'Both(Maths & Economics)') {
+          setState(() {
+            existingFiles = ['Mathematics', 'Economics'];
+          });
+          return;
+        }
+
+        final List<String> files = [];
+        for (final ref in references) {
+          final firebase_storage.ListResult result = await ref.listAll();
+          files.addAll(result.items.map((item) => item.name));
+        }
+
+        setState(() {
+          existingFiles = files;
+        });
+      }
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading files: $e')),
@@ -74,7 +105,9 @@ class _StudyMaterialState extends State<StudyMaterial> {
 
   Future<void> downloadFile(String fileName) async {
     try {
-      final ref = firebase_storage.FirebaseStorage.instance.ref().child("Study Material/$userClass/$fileName");
+      final ref = firebase_storage.FirebaseStorage.instance
+          .ref()
+          .child("Study Material/$userClass/$userBoard/$currentSubject/$fileName");
       final Directory tempDir = await getTemporaryDirectory();
       final String tempFilePath = '${tempDir.path}/$fileName';
       await ref.writeToFile(File(tempFilePath));
@@ -101,12 +134,30 @@ class _StudyMaterialState extends State<StudyMaterial> {
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Study Materials',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 20),
             ),
+            const SizedBox(height: 10),
+            if (currentSubject.isNotEmpty)
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back),
+                    onPressed: () {
+                      setState(() {
+                        currentSubject = '';
+                        existingFiles = ['Mathematics', 'Economics'];
+                      });
+                    },
+                  ),
+                  Text(
+                    currentSubject,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             const SizedBox(height: 10),
             isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -119,19 +170,26 @@ class _StudyMaterialState extends State<StudyMaterial> {
 
   Widget _buildStudyMaterialList() {
     return RefreshIndicator(
-      onRefresh: loadExistingFiles,
+      onRefresh: () => loadExistingFiles(subject: currentSubject),
       child: existingFiles.isEmpty
           ? const Center(child: Text('No study materials available'))
           : ListView.builder(
         itemCount: existingFiles.length,
         itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(existingFiles[index]),
-            trailing: IconButton(
-              icon: const Icon(CupertinoIcons.down_arrow),
-              onPressed: () => downloadFile(existingFiles[index]),
-            ),
-          );
+          if (userSub == 'Both(Maths & Economics)' && currentSubject.isEmpty) {
+            return ListTile(
+              title: Text(existingFiles[index]),
+              onTap: () => loadExistingFiles(subject: existingFiles[index]),
+            );
+          } else {
+            return ListTile(
+              title: Text(existingFiles[index]),
+              trailing: IconButton(
+                icon: const Icon(CupertinoIcons.down_arrow),
+                onPressed: () => downloadFile(existingFiles[index]),
+              ),
+            );
+          }
         },
       ),
     );
