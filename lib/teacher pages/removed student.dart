@@ -14,7 +14,7 @@ class _RemovedStudentsState extends State<RemovedStudents> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Removed Student'),
+        title: const Text('Removed Students'),
         leading: IconButton(
           onPressed: (){
             Navigator.pop(context);
@@ -31,22 +31,22 @@ class _RemovedStudentsState extends State<RemovedStudents> {
             return Text('Error: ${snapshot.error}');
           } else {
             final students = snapshot.data?.docs ?? [];
-            final activeStudents = students.where((user) {
+            final removedStudents = students.where((user) {
               final data = user.data() as Map<String, dynamic>;
               final status = data['Status'] as String?;
               final role = data['role'] as String?;
               return status == 'Removed' && role == 'Student';
             }).toList();
 
-            if (activeStudents.isEmpty) {
+            if (removedStudents.isEmpty) {
               return const Center(child: Text('No one is removed'));
             }
 
             return ListView.builder(
               shrinkWrap: true,
-              itemCount: activeStudents.length,
+              itemCount: removedStudents.length,
               itemBuilder: (context, index) {
-                final user = activeStudents[index].data() as Map<String, dynamic>?;
+                final user = removedStudents[index].data() as Map<String, dynamic>?;
                 if (user != null) {
                   final firstName = user['First Name'] as String?;
                   final lastName = user['Last Name'] as String?;
@@ -57,7 +57,10 @@ class _RemovedStudentsState extends State<RemovedStudents> {
                   return ListTile(
                     onTap: (){
                       Navigator.push(context, MaterialPageRoute(builder: (context) {
-                        return const PersonalInfo();
+                        return PersonalInfo(
+                          userData: user,
+                          userId: removedStudents[index].id,
+                        );
                       }));
                     },
                     title: Text(name),
@@ -66,7 +69,7 @@ class _RemovedStudentsState extends State<RemovedStudents> {
                       onPressed: () async {
                         try {
                           await FirebaseFirestore.instance.collection('Users')
-                              .doc(activeStudents[index].id) // Use the document ID directly
+                              .doc(removedStudents[index].id) // Use the document ID directly
                               .update({'Status': 'Active'});
                         } catch (e) {
                           print('Error updating document: $e');

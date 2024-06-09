@@ -124,9 +124,12 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                               final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
 
                               return ListTile(
-                                onTap: (){
+                                onTap: () {
                                   Navigator.push(context, MaterialPageRoute(builder: (context) {
-                                    return const PersonalInfo();
+                                    return PersonalInfo(
+                                      userData: user,
+                                      userId: waitingStudents[index].id,
+                                    );
                                   }));
                                 },
                                 title: Text(name),
@@ -205,9 +208,12 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                               final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
 
                               return ListTile(
-                                onTap: (){
+                                onTap: () {
                                   Navigator.push(context, MaterialPageRoute(builder: (context) {
-                                    return const PersonalInfo();
+                                    return PersonalInfo(
+                                      userData: user,
+                                      userId: activeStudents[index].id,
+                                    );
                                   }));
                                 },
                                 title: Text(name),

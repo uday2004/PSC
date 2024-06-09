@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -272,13 +271,11 @@ class _ChangeFeesState extends State<ChangeFees> {
       Map<String, dynamic> allData = {};
 
       // Fetch all fees data
-      QuerySnapshot feesQuerySnapshot =
-      await FirebaseFirestore.instance.collection('Fees').get();
+      QuerySnapshot feesQuerySnapshot = await FirebaseFirestore.instance.collection('Fees').get();
 
       // Accumulate fees data
       for (var feesDoc in feesQuerySnapshot.docs) {
-        Map<String, dynamic> feesData =
-        feesDoc.data() as Map<String, dynamic>;
+        Map<String, dynamic> feesData = feesDoc.data() as Map<String, dynamic>;
         String className = feesDoc.id;
 
         allData[className] = feesData;
@@ -288,21 +285,17 @@ class _ChangeFeesState extends State<ChangeFees> {
       int year = DateTime.now().year;
 
       // Reference to the Fees_due collection
-      final db = FirebaseFirestore.instance
-          .collection('Fees_due')
-          .doc('${monthController.text.trim()}_$year');
+      final db = FirebaseFirestore.instance.collection('Fees_due').doc('${monthController.text.trim()}_$year');
 
       // Save all accumulated fees data
       await db.set(allData, SetOptions(merge: true));
 
       // Fetch all users data
-      QuerySnapshot usersQuerySnapshot =
-      await FirebaseFirestore.instance.collection('Users').get();
+      QuerySnapshot usersQuerySnapshot = await FirebaseFirestore.instance.collection('Users').get();
 
       // Process each user
       for (var userDoc in usersQuerySnapshot.docs) {
-        Map<String, dynamic> userData =
-        userDoc.data() as Map<String, dynamic>;
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
         String userUid = userDoc.id;
 
         // Check if user is active student
@@ -311,7 +304,7 @@ class _ChangeFeesState extends State<ChangeFees> {
           String subject;
 
           // Set subject based on course
-          if (userData['Subject'] == 'CA Foundation') {
+          if (course == 'CA Foundation') {
             subject = 'Mathematics';
           } else {
             subject = userData['Subject'];
@@ -320,8 +313,7 @@ class _ChangeFeesState extends State<ChangeFees> {
           int fees;
 
           // Check if the subject is available in the fees data
-          if (allData.containsKey(course) &&
-              allData[course].containsKey(subject)) {
+          if (allData.containsKey(course) && allData[course].containsKey(subject)) {
             fees = allData[course][subject];
           } else {
             // If subject not found, set fees to 0
@@ -360,8 +352,7 @@ class _ChangeFeesState extends State<ChangeFees> {
       );
     }
   }
-
-
+  
   Widget buildCurrentFeesSection() {
     return Expanded(
       child: StreamBuilder<QuerySnapshot>(
@@ -390,7 +381,7 @@ class _ChangeFeesState extends State<ChangeFees> {
                     if (data['Mathematics'] != null) Text(
                         'Mathematics: ₹${data['Mathematics']}'),
                     if (data['Both(Maths & Economics)'] != null) Text(
-                        'Both: ₹${data['Mathematics']+data['Economics']}'),
+                        'Both: ₹${data['Both(Maths & Economics)']}'),
                   ],
                 ),
               );

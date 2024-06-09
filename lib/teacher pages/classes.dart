@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../models/meeting_link_model.dart';
 import '../repository/meeting_link_repository.dart';
 
 class PiyushClasses extends StatefulWidget {
@@ -250,7 +251,154 @@ class _PiyushClassesState extends State<PiyushClasses> {
   }
 
   Future<void> openDialog() async {
-    // Same code as before, no changes needed
+    final TextEditingController meetingLinkController = TextEditingController();
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController topicController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay fromTime = TimeOfDay.now();
+    TimeOfDay toTime = TimeOfDay.now();
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Room Id'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: meetingLinkController,
+                  decoration: InputDecoration(labelText: 'Room ID'),
+                ),
+                TextField(
+                  controller: passwordController,
+                  decoration: InputDecoration(labelText: 'Password'),
+                ),
+                TextField(
+                  controller: topicController,
+                  decoration: InputDecoration(labelText: 'Topic'),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Select Date:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () async {
+                    final DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
+                    );
+                    if (pickedDate != null) {
+                      setState(() {
+                        selectedDate = pickedDate;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      '${selectedDate.year}-${selectedDate.month}-${selectedDate.day}',
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Select From Time:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () async {
+                    final TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: fromTime,
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        fromTime = pickedTime;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      '${fromTime.hour}:${fromTime.minute}',
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'Select To Time:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () async {
+                    final TimeOfDay? pickedTime = await showTimePicker(
+                      context: context,
+                      initialTime: toTime,
+                    );
+                    if (pickedTime != null) {
+                      setState(() {
+                        toTime = pickedTime;
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Text(
+                      '${toTime.hour}:${toTime.minute}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                // Here you can handle adding the meeting link to Firestore
+                MeetingLink link = MeetingLink(
+                  meetingLink: meetingLinkController.text,
+                  fromTime: fromTime,
+                  toTime: toTime,
+                  password: passwordController.text,
+                  topic: topicController.text,
+                  date: selectedDate,
+                );
+                linkRepo.createLink(link, dropdownValue); // Assuming dropdownValue is the course
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Stream<List<String>> _fileListStream() async* {

@@ -24,115 +24,118 @@ class _FeesState extends State<Fees> {
           ? const Center(child: Text('User not logged in'))
           : Column(
         children: [
-          StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('Fees_due')
-                .doc(currentMonthYear)
-                .collection('Users')
-                .doc(currentUser.uid)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return const Center(child: Text('Error loading links'));
-              }
-              if (!snapshot.hasData || !snapshot.data!.exists) {
-                return const Center(child: Text('No Fees found for the current month'));
-              }
-
-              var doc = snapshot.data!;
-              String title = doc['Month'];
-              String course = doc['Course'];
-              String sub = doc['Subject'];
-              String status = doc['Status'];
-
-              return ListView(
-                shrinkWrap: true,
-                children: [
-                  ListTile(
-                    title: Text("Month: $title $sub $course"),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(status),
-                        const Divider(),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('Fees_due')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return const Center(child: Text('Error loading links'));
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text(' '));
-                }
-
-                List<QueryDocumentSnapshot> docs = snapshot.data!.docs;
-                List<Widget> userFees = [];
-
-                for (var doc in docs) {
-                  if (doc.reference.collection('Users').doc(currentUser.uid) != null) {
-                    userFees.add(
-                      StreamBuilder<DocumentSnapshot>(
-                        stream: doc.reference.collection('Users').doc(currentUser.uid).snapshots(),
-                        builder: (context, userSnapshot) {
-                          if (userSnapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          if (userSnapshot.hasError) {
-                            return const Center(child: Text('Error loading links'));
-                          }
-                          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                            return const SizedBox.shrink();
-                          }
-
-                          var userDoc = userSnapshot.data!;
-                          String title = userDoc['Month'];
-                          String status = userDoc['Status'];
-                          String sub = userDoc['Subject'];
-                          String course = userDoc['Course'];
-                          String fees = userDoc['Fees'];
-                          return ListTile(
-                            title: Text("Topic: $title $sub $course"),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('$status ₹ $fees'),
-                                const Divider(),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  }
-                }
-
-                return ListView(
-                  shrinkWrap: true,
-                  children: userFees.isEmpty
-                      ? [const Center(child: Text('No Fees found for other months'))]
-                      : userFees,
-                );
-              },
-            ),
-          ),
+          _buildCurrentMonthFees(currentUser.uid, currentMonthYear),
+          Expanded(child: _buildOtherMonthsFees(currentUser.uid)),
         ],
       ),
+    );
+  }
+
+  // Helper function to build the current month's fees stream
+  Widget _buildCurrentMonthFees(String uid, String currentMonthYear) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('Fees_due')
+          .doc(currentMonthYear)
+          .collection('Users')
+          .doc(uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading fees'));
+        }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text(' '));
+        }
+
+        var doc = snapshot.data!;
+        String title = doc['Month'];
+        String status = doc['Status'];
+
+        return ListTile(
+          title: Text("Month: $title "),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(status),
+              const Divider(),
+            ],
+          ),
+          trailing: checkStatus(status, uid, currentMonthYear),
+        );
+      },
+    );
+  }
+
+  // Helper function to build the other months' fees stream
+  Widget _buildOtherMonthsFees(String uid) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('Fees_due').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading fees'));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text(' '));
+        }
+
+        List<QueryDocumentSnapshot> docs = snapshot.data!.docs;
+        List<Widget> userFees = [];
+
+        for (var doc in docs) {
+          userFees.add(
+            _buildUserFee(doc.reference.collection('Users').doc(uid)),
+          );
+        }
+
+        return ListView(
+          shrinkWrap: true,
+          children: userFees.isEmpty
+              ? [const Center(child: Text(' '))]
+              : userFees,
+        );
+      },
+    );
+  }
+
+  // Helper function to build each user's fee information
+  Widget _buildUserFee(DocumentReference userDocRef) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: userDocRef.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading fees'));
+        }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const SizedBox.shrink();
+        }
+
+        var userDoc = snapshot.data!;
+        String title = userDoc['Month'];
+        String status = userDoc['Status'];
+        int fees = userDoc['Fees'];
+
+        return ListTile(
+          title: Text("Month: $title"),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$status ₹ $fees'),
+              const Divider(),
+            ],
+          ),
+          trailing: checkStatus(status, userDocRef.id, title),
+        );
+      },
     );
   }
 
@@ -143,5 +146,29 @@ class _FeesState extends State<Fees> {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[month - 1];
+  }
+
+  Widget checkStatus(String status, String userId, String month) {
+    switch (status) {
+      case 'Paid':
+        return const Icon(Icons.check_circle, color: Colors.green);
+      case 'Pending':
+        return IconButton(
+          onPressed: () async {
+            // Update the user status to 'Waiting'
+            await FirebaseFirestore.instance
+                .collection('Fees_due')
+                .doc(month)
+                .collection('Users')
+                .doc(userId)
+                .update({'Status': 'Waiting'});
+          },
+          icon: const Icon(Icons.check),
+        );
+      case 'Waiting':
+        return const Icon(Icons.error_outlined, color: Colors.red);
+      default:
+        return const Icon(Icons.help, color: Colors.grey);
+    }
   }
 }

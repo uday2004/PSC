@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:psc/student%20pages/fees.dart';
-import 'package:psc/student%20pages/setting.dart' as psc_settings;
 import 'package:psc/student%20pages/setting.dart';
 import 'package:psc/student%20pages/study_material.dart';
 import 'classes.dart';
@@ -83,11 +83,11 @@ class _HomePageState extends State<HomePage> {
         if (subject.isNotEmpty) {
           references.add(firebase_storage.FirebaseStorage.instance
               .ref()
-              .child("Study Material/$userClass/$userBoard/$subject"));
+              .child("Assignments/$userClass/$userBoard/$subject"));
         } else if (userSub == 'Economics' || userSub == 'Mathematics') {
           references.add(firebase_storage.FirebaseStorage.instance
               .ref()
-              .child("Study Material/$userClass/$userBoard/$userSub"));
+              .child("Assignments/$userClass/$userBoard/$userSub"));
         } else if (userSub == 'Both(Maths & Economics)') {
           setState(() {
             existingFiles = ['Mathematics', 'Economics'];
@@ -121,7 +121,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final ref = firebase_storage.FirebaseStorage.instance
           .ref()
-          .child("Study Material/$userClass/$userBoard/${currentSubject.isEmpty ? '' : '$currentSubject/'}$fileName");
+          .child("Assignments/$userClass/$userBoard/${currentSubject.isEmpty ? '' : '$currentSubject/'}$fileName");
       final Directory tempDir = await getTemporaryDirectory();
       final String tempFilePath = '${tempDir.path}/$fileName';
       await ref.writeToFile(File(tempFilePath));
@@ -140,27 +140,25 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> downloadFileAndOpen(String fileName) async {
+    try {
+      final File? file = await downloadFile(fileName);
+      if (file != null) {
+        // Open the file using appropriate platform-specific viewer
+        OpenFile.open(file.path);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error downloading file: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: currentSubject.isNotEmpty
-          ? AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        title: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                loadExistingFiles(); // Go back to the subjects list
-              },
-            ),
-            const Text('Files'),
-          ],
-        ),
-      )
-          : const CustAppBar(),
+      appBar: CustAppBar(),
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {
@@ -198,72 +196,64 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: RefreshIndicator(
-          onRefresh: () => loadExistingFiles(subject: currentSubject),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                const Text('Assignments:', style: TextStyle(fontSize: 20)),
-                const SizedBox(height: 10),
-                if (currentSubject.isNotEmpty)
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {
-                          setState(() {
-                            currentSubject = '';
-                            existingFiles = ['Mathematics', 'Economics'];
-                          });
-                        },
-                      ),
-                      Text(
-                        currentSubject,
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 10),
-                isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: existingFiles.length,
-                  itemBuilder: (context, index) {
-                    if (userSub == 'Both(Maths & Economics)' &&
-                        currentSubject.isEmpty) {
-                      return ListTile(
-                        title: Text(existingFiles[index]),
-                        onTap: () => loadExistingFiles(
-                            subject: existingFiles[index]),
-                      );
-                    } else {
-                      return ListTile(
-                        title: Text(existingFiles[index]),
-                        trailing: currentSubject.isEmpty
-                            ? null
-                            : IconButton(
-                          icon: const Icon(CupertinoIcons.down_arrow),
-                          onPressed: () => downloadFile(existingFiles[index]),
-                        ),
-                        onTap: currentSubject.isEmpty
-                            ? () {
-                          loadExistingFiles(
-                              subject: existingFiles[index]);
-                        }
-                            : null,
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
+        child: Column(
+          children: [
+            const Text(
+              'Assignments',
+              style: TextStyle(fontSize: 20),
             ),
-          ),
+            const SizedBox(height: 10),
+            if (currentSubject.isNotEmpty)
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      setState(() {
+                        currentSubject = '';
+                        existingFiles = ['Mathematics', 'Economics'];
+                      });
+                    },
+                  ),
+                  Text(
+                    currentSubject,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            const SizedBox(height: 10),
+            isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Expanded(child: _buildAssignmentList()),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAssignmentList() {
+    return RefreshIndicator(
+      onRefresh: () => loadExistingFiles(subject: currentSubject),
+      child: existingFiles.isEmpty
+          ? const Center(child: Text('No assignments available'))
+          : ListView.builder(
+        itemCount: existingFiles.length,
+        itemBuilder: (context, index) {
+          if (userSub == 'Both(Maths & Economics)' && currentSubject.isEmpty) {
+            return ListTile(
+              title: Text(existingFiles[index]),
+              onTap: () => loadExistingFiles(subject: existingFiles[index]),
+            );
+          } else {
+            return ListTile(
+              title: Text(existingFiles[index]),
+              trailing: IconButton(
+                icon: const Icon(CupertinoIcons.down_arrow),
+                onPressed: () => downloadFile(existingFiles[index]),
+              ),
+            );
+          }
+        },
       ),
     );
   }
