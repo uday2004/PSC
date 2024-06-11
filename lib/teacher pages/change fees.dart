@@ -25,7 +25,7 @@ class _ChangeFeesState extends State<ChangeFees> {
     'Class 12',
     'CA Foundation'
   ];
-  static const List<String> subjectList = <String>['Economics', 'Mathematics'];
+  static const List<String> subjectList = <String>['-Select-', 'Economics', 'Mathematics'];
   static const List<String> monthList = <String>[
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'

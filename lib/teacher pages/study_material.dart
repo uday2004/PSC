@@ -22,9 +22,9 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   String dropdownValueSubject = listSubject.first;
   String dropdownValueBoard = listBoard.first;
 
-  static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
-  static const List<String> listBoard = <String>['ISC', 'CBSE', 'West Bengal'];
-  static const List<String> listSubject = <String>['Mathematics', 'Economics'];
+  static const List<String> list = <String>['-Select-', 'Class 11', 'Class 12', 'CA Foundation'];
+  static const List<String> listBoard = <String>['-Select-', 'ISC', 'CBSE', 'West Bengal'];
+  static const List<String> listSubject = <String>['-Select-', 'Mathematics', 'Economics'];
 
   bool isLoading = false;
 

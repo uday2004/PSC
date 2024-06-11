@@ -1,11 +1,7 @@
-import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:open_file/open_file.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:psc/student%20pages/assignment.dart';
 import 'package:psc/student%20pages/fees.dart';
 import 'package:psc/student%20pages/setting.dart';
 import 'package:psc/student%20pages/study_material.dart';
@@ -22,46 +18,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late PageController _pageController;
   int _currentIndex = 0;
-  List<String> existingFiles = [];
-  bool isLoading = false;
-  late String userClass;
-  late String userSub;
-  late String userBoard;
-  String currentSubject = '';
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
-    _getUserClass();
-  }
-
-  Future<void> _getUserClass() async {
-    String? uid = FirebaseAuth.instance.currentUser?.uid;
-
-    if (uid != null) {
-      try {
-        DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-            .collection('Users')
-            .doc(uid)
-            .get();
-
-        Map<String, dynamic>? userData = docSnapshot.data() as Map<String, dynamic>?;
-
-        if (userData != null) {
-          setState(() {
-            userClass = userData['Course'];
-            userSub = userData['Subject'];
-            userBoard = userData['Board'];
-          });
-          loadExistingFiles(); // Load existing files once user class is fetched
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching user data: $e')),
-        );
-      }
-    }
   }
 
   @override
@@ -70,95 +31,11 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  Future<void> loadExistingFiles({String subject = ''}) async {
-    try {
-      setState(() {
-        isLoading = true;
-        currentSubject = subject;
-      });
-
-      final List<firebase_storage.Reference> references = [];
-
-      if (userClass == 'Class 11' || userClass == 'Class 12') {
-        if (subject.isNotEmpty) {
-          references.add(firebase_storage.FirebaseStorage.instance
-              .ref()
-              .child("Assignments/$userClass/$userBoard/$subject"));
-        } else if (userSub == 'Economics' || userSub == 'Mathematics') {
-          references.add(firebase_storage.FirebaseStorage.instance
-              .ref()
-              .child("Assignments/$userClass/$userBoard/$userSub"));
-        } else if (userSub == 'Both(Maths & Economics)') {
-          setState(() {
-            existingFiles = ['Mathematics', 'Economics'];
-          });
-          return;
-        }
-
-        final List<String> files = [];
-        for (final ref in references) {
-          final firebase_storage.ListResult result = await ref.listAll();
-          files.addAll(result.items.map((item) => item.name));
-        }
-
-        setState(() {
-          existingFiles = files;
-        });
-      }
-
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading files: $e')),
-      );
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<File?> downloadFile(String fileName) async {
-    try {
-      final ref = firebase_storage.FirebaseStorage.instance
-          .ref()
-          .child("Assignments/$userClass/$userBoard/${currentSubject.isEmpty ? '' : '$currentSubject/'}$fileName");
-      final Directory tempDir = await getTemporaryDirectory();
-      final String tempFilePath = '${tempDir.path}/$fileName';
-      await ref.writeToFile(File(tempFilePath));
-      final Directory appDocDir = await getApplicationDocumentsDirectory();
-      final String appDocPath = '${appDocDir.path}/$fileName';
-      final File tempFile = File(tempFilePath);
-      await tempFile.copy(appDocPath);
-      await tempFile.delete();
-      return File(appDocPath);
-    } catch (e) {
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error downloading file: $e')),
-      );
-      return null;
-    }
-  }
-
-  Future<void> downloadFileAndOpen(String fileName) async {
-    try {
-      final File? file = await downloadFile(fileName);
-      if (file != null) {
-        // Open the file using appropriate platform-specific viewer
-        OpenFile.open(file.path);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error downloading file: $e')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: CustAppBar(),
+      appBar: const CustAppBar(),
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {
@@ -168,6 +45,7 @@ class _HomePageState extends State<HomePage> {
         },
         children: [
           HomePageContent(context),
+          const Assignment(),
           const Classes(),
           const StudyMaterial(),
           const Fees(),
@@ -191,72 +69,91 @@ class _HomePageState extends State<HomePage> {
 
   Widget HomePageContent(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-      ),
+      color: Theme.of(context).colorScheme.primary,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: Column(
-          children: [
-            const Text(
-              'Assignments',
-              style: TextStyle(fontSize: 20),
-            ),
-            const SizedBox(height: 10),
-            if (currentSubject.isNotEmpty)
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () {
-                      setState(() {
-                        currentSubject = '';
-                        existingFiles = ['Mathematics', 'Economics'];
-                      });
-                    },
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+          
+              //Attendance
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    children: [
+                      const Text('Attendance',textAlign: TextAlign.center,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w500),),
+                      const SizedBox(height: 10,),
+                      Text('Present: 10'),
+                      Text('Absent: 10'),
+                      Text('Total: 10'),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 200,
+                        child: PieChart(
+                          PieChartData(
+                            startDegreeOffset: 90,
+                            sectionsSpace: 0,
+                            centerSpaceRadius: 40,
+                            sections: [
+                              PieChartSectionData(
+                                value: 10,
+                                color: Colors.red,
+                                radius: 40, // Adjust radius to make the sections thinner
+                              ),
+                              PieChartSectionData(
+                                value: 10,
+                                color: Colors.blue,
+                                radius: 40, // Adjust radius to make the sections thinner
+                                title: 'Waiting',
+                              ),
+                              PieChartSectionData(
+                                value: 10,
+                                color: Colors.green,
+                                radius: 40, // Adjust radius to make the sections thinner
+                                title: 'Paid',
+                              ),
+                            ],
+                          )
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: (){},
+                        child: const Text('Details',style: TextStyle(color: Colors.orangeAccent),),
+                      )
+                    ],
                   ),
-                  Text(
-                    currentSubject,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ],
+                ),
               ),
-            const SizedBox(height: 10),
-            isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Expanded(child: _buildAssignmentList()),
-          ],
+
+              const SizedBox(height: 20,),
+
+              //Classes & Meeting Links
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                width: double.infinity,
+                child: Column(
+                  children: [
+                    const Text('Classes',textAlign: TextAlign.center,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w500),)
+                  ],
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildAssignmentList() {
-    return RefreshIndicator(
-      onRefresh: () => loadExistingFiles(subject: currentSubject),
-      child: existingFiles.isEmpty
-          ? const Center(child: Text('No assignments available'))
-          : ListView.builder(
-        itemCount: existingFiles.length,
-        itemBuilder: (context, index) {
-          if (userSub == 'Both(Maths & Economics)' && currentSubject.isEmpty) {
-            return ListTile(
-              title: Text(existingFiles[index]),
-              onTap: () => loadExistingFiles(subject: existingFiles[index]),
-            );
-          } else {
-            return ListTile(
-              title: Text(existingFiles[index]),
-              trailing: IconButton(
-                icon: const Icon(CupertinoIcons.down_arrow),
-                onPressed: () => downloadFile(existingFiles[index]),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
+
 }
 
 // CUSTOM BOTTOM APP BAR
@@ -281,8 +178,12 @@ class CustBottomBar extends StatelessWidget {
           label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(CupertinoIcons.group_solid),
-          label: 'Meeting',
+          icon: Icon(Icons.assignment),
+          label: 'Assignment',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(CupertinoIcons.video_camera),
+          label: 'Classes',
         ),
         BottomNavigationBarItem(
           icon: Icon(CupertinoIcons.book),

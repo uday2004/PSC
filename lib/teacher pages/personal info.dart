@@ -30,6 +30,7 @@ class _PersonalInfoState extends State<PersonalInfo> {
     _emailController = TextEditingController(text: widget.userData['email']);
     _selectedClass = widget.userData['Class'] ?? '';
     _selectedSubject = widget.userData['Subject'] ?? '';
+    _selectedBoard = widget.userData['Board'] ?? '';
   }
 
   @override

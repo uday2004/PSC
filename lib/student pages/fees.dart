@@ -14,59 +14,15 @@ class _FeesState extends State<Fees> {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    // Get the current month and year as a string (e.g., "March_2024")
-    final now = DateTime.now();
-    final currentMonthYear = '${_getMonthText(now.month)}_${now.year}';
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.primary,
       body: currentUser == null
           ? const Center(child: Text('User not logged in'))
           : Column(
         children: [
-          _buildCurrentMonthFees(currentUser.uid, currentMonthYear),
           Expanded(child: _buildOtherMonthsFees(currentUser.uid)),
         ],
       ),
-    );
-  }
-
-  // Helper function to build the current month's fees stream
-  Widget _buildCurrentMonthFees(String uid, String currentMonthYear) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Fees_due')
-          .doc(currentMonthYear)
-          .collection('Users')
-          .doc(uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return const Center(child: Text('Error loading fees'));
-        }
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text(' '));
-        }
-
-        var doc = snapshot.data!;
-        String title = doc['Month'];
-        String status = doc['Status'];
-
-        return ListTile(
-          title: Text("Month: $title "),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(status),
-              const Divider(),
-            ],
-          ),
-          trailing: checkStatus(status, uid, currentMonthYear),
-        );
-      },
     );
   }
 
@@ -125,7 +81,8 @@ class _FeesState extends State<Fees> {
         int fees = userDoc['Fees'];
 
         return ListTile(
-          title: Text("Month: $title"),
+          selectedTileColor: Theme.of(context).colorScheme.secondary,
+          title: Text("Month: $title "),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -139,29 +96,74 @@ class _FeesState extends State<Fees> {
     );
   }
 
-  // Helper function to get the month as a text string
-  String _getMonthText(int month) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return months[month - 1];
-  }
-
   Widget checkStatus(String status, String userId, String month) {
+    TextEditingController modeController = TextEditingController();
+    List<String> mode = ['Cash', 'Online'];
+    String dropdownValue = mode.first;
+
     switch (status) {
       case 'Paid':
         return const Icon(Icons.check_circle, color: Colors.green);
       case 'Pending':
         return IconButton(
           onPressed: () async {
-            // Update the user status to 'Waiting'
-            await FirebaseFirestore.instance
-                .collection('Fees_due')
-                .doc(month)
-                .collection('Users')
-                .doc(userId)
-                .update({'Status': 'Waiting'});
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    return AlertDialog(
+                      title: const Text('Paid via'),
+                      content: DropdownButtonFormField<String>(
+                        value: dropdownValue,
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            dropdownValue = newValue!;
+                            modeController.text = dropdownValue;
+                          });
+                        },
+                        items: mode.map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            // Update the user status to 'Waiting'
+                            await FirebaseFirestore.instance
+                                .collection('Fees_due')
+                                .doc(month)
+                                .collection('Users')
+                                .doc(userId)
+                                .update({'Status': 'Waiting'});
+
+                            // Record the payment mode
+                            await FirebaseFirestore.instance
+                                .collection('Fees_due')
+                                .doc(month)
+                                .collection('Users')
+                                .doc(userId)
+                                .update({'Mode': modeController.text.trim()});
+
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Add'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            );
           },
           icon: const Icon(Icons.check),
         );

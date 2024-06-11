@@ -32,19 +32,23 @@ class _PiyushClassesState extends State<PiyushClasses> {
   bool isLoading = false;
 
   static const List<String> list = <String>[
+    '-Select-',
     'Class 11',
     'Class 12',
     'CA Foundation'
   ];
   static const List<String> listOption = <String>[
+    '-Select-',
     'Recorded Classes',
     'Meeting Link'
   ];
   static const List<String> listOptionSubject = <String>[
+    '-Select-',
     'Economics',
     'Mathematics'
   ];
   static const List<String> listOptionBoard = <String>[
+    '-Select-',
     'ISC',
     'CBSE',
     'West Bengal'

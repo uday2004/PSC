@@ -16,7 +16,7 @@ class Classes extends StatefulWidget {
 class _ClassesState extends State<Classes> {
   TextEditingController optionController = TextEditingController();
   String dropDownValue = list.first;
-  static const List<String> list = <String>['Recorded Classes', 'Meeting Link'];
+  static const List<String> list = <String>['-Select-', 'Recorded Classes', 'Meeting Link'];
 
   late String userClass = '';
   late String userSub = '';

@@ -22,9 +22,9 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
   String dropdownValueSubject = listSubject.first;
   String dropdownValueBoard = listBoard.first;
 
-  static const List<String> list = <String>['Class 11', 'Class 12', 'CA Foundation'];
-  static const List<String> listBoard = <String>['ISC', 'CBSE', 'West Bengal'];
-  static const List<String> listSubject = <String>['Economics', 'Mathematics'];
+  static const List<String> list = <String>['-Select-', 'Class 11', 'Class 12', 'CA Foundation'];
+  static const List<String> listBoard = <String>['-Select-', 'ISC', 'CBSE', 'West Bengal'];
+  static const List<String> listSubject = <String>['-Select-', 'Economics', 'Mathematics'];
   bool isLoading = false;
 
   @override
