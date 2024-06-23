@@ -1,6 +1,8 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -18,13 +20,13 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   TextEditingController boardController = TextEditingController();
   TextEditingController subjectController = TextEditingController();
 
-  String dropdownValue = list.first;
-  String dropdownValueSubject = listSubject.first;
+  String dropdownValue = '-Select-';
+  String dropdownValueSubject = '-Select-';
   String dropdownValueBoard = listBoard.first;
 
-  static const List<String> list = <String>['-Select-', 'Class 11', 'Class 12', 'CA Foundation'];
+  List<String> list = <String>[];
   static const List<String> listBoard = <String>['-Select-', 'ISC', 'CBSE', 'West Bengal'];
-  static const List<String> listSubject = <String>['-Select-', 'Mathematics', 'Economics'];
+  List<String> listSubject = <String>[];
 
   bool isLoading = false;
 
@@ -32,6 +34,45 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
   void initState() {
     super.initState();
     courseController.text = dropdownValue;
+    fetchClassList();
+  }
+
+  Future<void> fetchClassList() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('Course').get();
+      setState(() {
+        list.addAll(querySnapshot.docs.map((doc) => doc.id).toList());
+        if (list.isNotEmpty) {
+          dropdownValue = list.first; // Set default value here
+        }
+      });
+      await fetchSubjectList(dropdownValue);
+    } catch (e) {
+      log('Error fetching class list: $e');
+    }
+  }
+
+  Future<void> fetchSubjectList(String selectedClass) async {
+    try {
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance.collection('Course').doc(selectedClass).get();
+      if (docSnapshot.exists && docSnapshot.data() != null) {
+        List<dynamic> subjectData = docSnapshot['Subject'];
+        setState(() {
+          listSubject = subjectData.map((subject) => subject.toString()).toList();
+          dropdownValueSubject = listSubject.isNotEmpty ? listSubject.first : '-Select-';
+          subjectController.text = dropdownValueSubject;
+        });
+      } else {
+        log('No such document or document is empty!');
+        setState(() {
+          listSubject.clear();
+          dropdownValueSubject = '-Select-';
+          subjectController.text = dropdownValueSubject;
+        });
+      }
+    } catch (e) {
+      log('Error fetching subject list: $e');
+    }
   }
 
   @override
@@ -57,6 +98,7 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                   setState(() {
                     dropdownValue = value!;
                     courseController.text = value;
+                    fetchSubjectList(value);
                   });
                 },
                 items: list.map<DropdownMenuItem<String>>((String value) {
@@ -67,29 +109,29 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
                 }).toList(),
                 value: dropdownValue,
               ),
-              if(courseController.text == "Class 11" || courseController.text == "Class 12") ...[
-                DropdownButton<String>(
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_downward),
-                  elevation: 16,
-                  underline: Container(
-                    height: 2,
-                    color: Colors.orangeAccent,
-                  ),
-                  onChanged: (String? value) {
-                    setState(() {
-                      dropdownValueSubject = value!;
-                      subjectController.text = value;
-                    });
-                  },
-                  items: listSubject.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  value: dropdownValueSubject,
+              DropdownButton<String>(
+                isExpanded: true,
+                icon: const Icon(Icons.arrow_downward),
+                elevation: 16,
+                underline: Container(
+                  height: 2,
+                  color: Colors.orangeAccent,
                 ),
+                onChanged: (String? value) {
+                  setState(() {
+                    dropdownValueSubject = value!;
+                    subjectController.text = value;
+                  });
+                },
+                items: listSubject.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                value: dropdownValueSubject,
+              ),
+              if (dropdownValue == 'Class 7' || dropdownValue == 'Class 8' || dropdownValue == 'Class 9' || dropdownValue == 'Class 10' || dropdownValue == 'Class 11' || dropdownValue == 'Class 12') ...[
                 DropdownButton<String>(
                   isExpanded: true,
                   icon: const Icon(Icons.arrow_downward),
@@ -179,7 +221,7 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.any,
-      withData: true, // Ensure withData is set to true
+      withData: true,
     );
     if (result != null && result.files.isNotEmpty) {
       return result.files;
@@ -199,9 +241,8 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
           fileBytes = await File(file.path!).readAsBytes();
         }
         if (fileBytes != null) {
-          final ref = FirebaseStorage.instance
-              .ref()
-              .child("Study Material/${courseController.text}/${boardController.text}/${subjectController.text}/${file.name}");
+          final ref = FirebaseStorage.instance.ref().child(
+              "Study Material/${courseController.text}/${boardController.text}/${subjectController.text}/${file.name}");
           await ref.putData(fileBytes);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('File uploaded successfully')),
@@ -229,7 +270,8 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
 
   Future<List<String>> _loadExistingFiles() async {
     try {
-      final listRef = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/${boardController.text}/${subjectController.text}");
+      final listRef = FirebaseStorage.instance.ref().child(
+          "Study Material/${courseController.text}/${boardController.text}/${subjectController.text}");
       final ListResult result = await listRef.listAll();
       return result.items.map((item) => item.name).toList();
     } catch (e) {
@@ -245,7 +287,8 @@ class _PiyushStudyMaterialState extends State<PiyushStudyMaterial> {
       setState(() {
         isLoading = true;
       });
-      final ref = FirebaseStorage.instance.ref().child("Study Material/${courseController.text}/${boardController.text}/${subjectController.text}/$fileName");
+      final ref = FirebaseStorage.instance.ref().child(
+          "Study Material/${courseController.text}/${boardController.text}/${subjectController.text}/$fileName");
       await ref.delete();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('File deleted successfully')),

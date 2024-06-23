@@ -1,12 +1,15 @@
-import 'package:fl_chart/fl_chart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:psc/student%20pages/assignment.dart';
-import 'package:psc/student%20pages/fees.dart';
-import 'package:psc/student%20pages/setting.dart';
-import 'package:psc/student%20pages/study_material.dart';
+import 'package:intl/intl.dart';
+
+import 'assignment.dart';
 import 'classes.dart';
+import 'fees.dart';
 import 'notification.dart';
+import 'setting.dart';
+import 'study_material.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,17 +21,30 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late PageController _pageController;
   int _currentIndex = 0;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  late String currentUserUid = '';
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _currentIndex);
+    getCurrentUser();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> getCurrentUser() async {
+    final User? user = _auth.currentUser;
+
+    if (user != null) {
+      setState(() {
+        currentUserUid = user.uid;
+      });
+    }
   }
 
   @override
@@ -69,83 +85,84 @@ class _HomePageState extends State<HomePage> {
 
   Widget HomePageContent(BuildContext context) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       color: Theme.of(context).colorScheme.primary,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: SingleChildScrollView(
           child: Column(
             children: [
-          
-              //Attendance
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    children: [
-                      const Text('Attendance',textAlign: TextAlign.center,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w500),),
-                      const SizedBox(height: 10,),
-                      Text('Present: 10'),
-                      Text('Absent: 10'),
-                      Text('Total: 10'),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 200,
-                        child: PieChart(
-                          PieChartData(
-                            startDegreeOffset: 90,
-                            sectionsSpace: 0,
-                            centerSpaceRadius: 40,
-                            sections: [
-                              PieChartSectionData(
-                                value: 10,
-                                color: Colors.red,
-                                radius: 40, // Adjust radius to make the sections thinner
-                              ),
-                              PieChartSectionData(
-                                value: 10,
-                                color: Colors.blue,
-                                radius: 40, // Adjust radius to make the sections thinner
-                                title: 'Waiting',
-                              ),
-                              PieChartSectionData(
-                                value: 10,
-                                color: Colors.green,
-                                radius: 40, // Adjust radius to make the sections thinner
-                                title: 'Paid',
-                              ),
-                            ],
-                          )
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: (){},
-                        child: const Text('Details',style: TextStyle(color: Colors.orangeAccent),),
-                      )
-                    ],
+              // Meeting Links Section
+              Column(
+                children: [
+                  const Text(
+                    'Meeting Links',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('Users')
+                        .doc(currentUserUid)
+                        .snapshots(),
+                    builder: (BuildContext context,
+                        AsyncSnapshot<DocumentSnapshot> userSnapshot) {
+                      if (userSnapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      }
+                      if (userSnapshot.hasError) {
+                        return Text('Error: ${userSnapshot.error}');
+                      }
+                      if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                        return const Text('No meeting links available');
+                      }
+
+                      // Fetch user's course and selected subjects
+                      String userCourse = userSnapshot.data!.get('Course') ?? '';
+                      List<dynamic> selectedSubjects = userSnapshot.data!.get('Subject') ?? [];
+
+                      // Query meeting links collection
+                      return StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('MeetingLinks')
+                            .where('course', isEqualTo: userCourse)
+                            .snapshots(),
+                        builder: (BuildContext context,
+                            AsyncSnapshot<QuerySnapshot> meetingSnapshot) {
+                          if (meetingSnapshot.connectionState == ConnectionState.waiting) {
+                            return const CircularProgressIndicator();
+                          }
+                          if (meetingSnapshot.hasError) {
+                            return Text('Error: ${meetingSnapshot.error}');
+                          }
+                          if (meetingSnapshot.data == null || meetingSnapshot.data!.docs.isEmpty) {
+                            return const Text('No meeting links available');
+                          }
+
+                          // Filter meeting links based on the user's subjects
+                          List<QueryDocumentSnapshot> filteredDocs = meetingSnapshot.data!.docs.where((doc) {
+                            return selectedSubjects.contains(doc['subject']);
+                          }).toList();
+
+                          if (filteredDocs.isEmpty) {
+                            return const Text('No meeting links available');
+                          }
+
+                          // Build list of meeting link cards
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: filteredDocs
+                                .map((doc) => _buildMeetingLinkCard(doc))
+                                .toList(),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 20,),
-
-              //Classes & Meeting Links
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    const Text('Classes',textAlign: TextAlign.center,style: TextStyle(fontSize: 18,fontWeight: FontWeight.w500),)
-                  ],
-                ),
-              )
             ],
           ),
         ),
@@ -153,7 +170,38 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildMeetingLinkCard(QueryDocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    DateTime dateTime = data['date'] != null
+        ? (data['date'] as Timestamp).toDate()
+        : DateTime.now();
+    String formattedDate = DateFormat('dd-MM-yyyy – kk:mm').format(dateTime);
 
+    return Card(
+      elevation: 5,
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              data['topic'] ?? 'No topic',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text('Room ID: ${data['meetingLink']}'),
+            const SizedBox(height: 8),
+            Text('Password: ${data['password']}'),
+            const SizedBox(height: 8),
+            Text('Date and time: $formattedDate'),
+            const SizedBox(height: 8),
+            Text('Subject: ${data['subject']}'),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // CUSTOM BOTTOM APP BAR

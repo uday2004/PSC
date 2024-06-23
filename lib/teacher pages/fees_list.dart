@@ -44,7 +44,7 @@ class _FeesListState extends State<FeesList> {
               final status = userData['Status'] ?? 'No Status';
               final month = userData['Month'] ?? 'No Status';
               final uid = userData['UID'] ?? 'No Status';
-              final courseSubject = '${userData['Course']} ${userData['Subject']}';
+              final courseSubject = '${userData['Course']}';
 
               return ListTile(
                 title: Text('$name $courseSubject'),

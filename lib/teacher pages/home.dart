@@ -77,7 +77,10 @@ class _Piyush_HomeState extends State<Piyush_Home> {
   Container HomePageContent(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
+        color: Theme
+            .of(context)
+            .colorScheme
+            .primary,
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
@@ -89,10 +92,12 @@ class _Piyush_HomeState extends State<Piyush_Home> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  const Text('Students in waiting room', style: TextStyle(fontSize: 20)),
+                  const Text('Students in waiting room',
+                      style: TextStyle(fontSize: 20)),
                   const SizedBox(height: 20),
                   StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('Users').snapshots(),
+                    stream: FirebaseFirestore.instance.collection('Users')
+                        .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -111,72 +116,90 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                           return const Text('No one is in the waiting room...');
                         }
 
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: waitingStudents.length,
-                          itemBuilder: (context, index) {
-                            final user = waitingStudents[index].data() as Map<String, dynamic>?;
-                            if (user != null) {
-                              final firstName = user['First Name'] as String?;
-                              final lastName = user['Last Name'] as String?;
-                              final course = user['Course'] as String?;
-                              final email = user['email'] as String?;
-                              final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
+                        return SizedBox(
+                          height: 200, // Adjust the height as needed
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: waitingStudents.length,
+                            itemBuilder: (context, index) {
+                              final user = waitingStudents[index].data() as Map<
+                                  String,
+                                  dynamic>?;
+                              if (user != null) {
+                                final firstName = user['First Name'] as String?;
+                                final lastName = user['Last Name'] as String?;
+                                final course = user['Course'] as String?;
+                                final email = user['email'] as String?;
+                                final name = '${firstName ?? ''} ${lastName ??
+                                    ''} (${course ?? ''})';
 
-                              return ListTile(
-                                onTap: () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) {
-                                    return PersonalInfo(
-                                      userData: user,
-                                      userId: waitingStudents[index].id,
-                                    );
-                                  }));
-                                },
-                                title: Text(name),
-                                subtitle: Text(email ?? ''),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      onPressed: () async {
-                                        try {
-                                          await FirebaseFirestore.instance.collection('Users')
-                                              .doc(waitingStudents[index].id) // Use the document ID directly
-                                              .update({'Status': 'Active'});
-                                        } catch (e) {
-                                          print('Error updating document: $e');
-                                        }
-                                      },
-                                      icon: const Icon(Icons.check),
+                                return SizedBox(
+                                  height: 600,
+                                  child: ListTile(
+                                    onTap: () {
+                                      Navigator.push(context,
+                                          MaterialPageRoute(builder: (context) {
+                                            return PersonalInfo(
+                                              userData: user,
+                                              userId: waitingStudents[index].id,
+                                            );
+                                          }));
+                                    },
+                                    title: Text(name),
+                                    subtitle: Text(email ?? ''),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () async {
+                                            try {
+                                              await FirebaseFirestore.instance
+                                                  .collection('Users')
+                                                  .doc(waitingStudents[index]
+                                                  .id) // Use the document ID directly
+                                                  .update({'Status': 'Active'});
+                                            } catch (e) {
+                                              print(
+                                                  'Error updating document: $e');
+                                            }
+                                          },
+                                          icon: const Icon(Icons.check),
+                                        ),
+                                        IconButton(
+                                          onPressed: () async {
+                                            try {
+                                              await FirebaseFirestore.instance
+                                                  .collection('Users')
+                                                  .doc(waitingStudents[index]
+                                                  .id) // Use the document ID directly
+                                                  .update({'Status': 'Removed'});
+                                            } catch (e) {
+                                              print(
+                                                  'Error updating document: $e');
+                                            }
+                                          },
+                                          icon: const Icon(Icons.close_outlined),
+                                        ),
+                                      ],
                                     ),
-                                    IconButton(
-                                      onPressed: () async {
-                                        try {
-                                          await FirebaseFirestore.instance.collection('Users')
-                                              .doc(waitingStudents[index].id) // Use the document ID directly
-                                              .update({'Status': 'Removed'});
-                                        } catch (e) {
-                                          print('Error updating document: $e');
-                                        }
-                                      },
-                                      icon: const Icon(Icons.close_outlined),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else {
-                              return const SizedBox();
-                            }
-                          },
+                                  ),
+                                );
+                              } else {
+                                return const SizedBox();
+                              }
+                            },
+                          ),
                         );
                       }
                     },
                   ),
                   const SizedBox(height: 20),
-                  const Text('Students in class room', style: TextStyle(fontSize: 20)),
+                  const Text(
+                      'Students in class room', style: TextStyle(fontSize: 20)),
                   const SizedBox(height: 20),
                   StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance.collection('Users').snapshots(),
+                    stream: FirebaseFirestore.instance.collection('Users')
+                        .snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
@@ -195,46 +218,55 @@ class _Piyush_HomeState extends State<Piyush_Home> {
                           return const Text('No one is in the class room...');
                         }
 
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: activeStudents.length,
-                          itemBuilder: (context, index) {
-                            final user = activeStudents[index].data() as Map<String, dynamic>?;
-                            if (user != null) {
-                              final firstName = user['First Name'] as String?;
-                              final lastName = user['Last Name'] as String?;
-                              final course = user['Course'] as String?;
-                              final email = user['email'] as String?;
-                              final name = '${firstName ?? ''} ${lastName ?? ''} (${course ?? ''})';
+                        return SizedBox(
+                          height: 600,
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: activeStudents.length,
+                            itemBuilder: (context, index) {
+                              final user = activeStudents[index].data() as Map<
+                                  String,
+                                  dynamic>?;
+                              if (user != null) {
+                                final firstName = user['First Name'] as String?;
+                                final lastName = user['Last Name'] as String?;
+                                final course = user['Course'] as String?;
+                                final email = user['email'] as String?;
+                                final name = '${firstName ?? ''} ${lastName ??
+                                    ''} (${course ?? ''})';
 
-                              return ListTile(
-                                onTap: () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) {
-                                    return PersonalInfo(
-                                      userData: user,
-                                      userId: activeStudents[index].id,
-                                    );
-                                  }));
-                                },
-                                title: Text(name),
-                                subtitle: Text(email ?? ''),
-                                trailing: IconButton(
-                                  onPressed: () async {
-                                    try {
-                                      await FirebaseFirestore.instance.collection('Users')
-                                          .doc(activeStudents[index].id) // Use the document ID directly
-                                          .update({'Status': 'Removed'});
-                                    } catch (e) {
-                                      print('Error updating document: $e');
-                                    }
+                                return ListTile(
+                                  onTap: () {
+                                    Navigator.push(context,
+                                        MaterialPageRoute(builder: (context) {
+                                          return PersonalInfo(
+                                            userData: user,
+                                            userId: activeStudents[index].id,
+                                          );
+                                        }));
                                   },
-                                  icon: const Icon(Icons.exit_to_app_sharp),
-                                ),
-                              );
-                            } else {
-                              return const SizedBox();
-                            }
-                          },
+                                  title: Text(name),
+                                  subtitle: Text(email ?? ''),
+                                  trailing: IconButton(
+                                    onPressed: () async {
+                                      try {
+                                        await FirebaseFirestore.instance
+                                            .collection('Users')
+                                            .doc(activeStudents[index]
+                                            .id) // Use the document ID directly
+                                            .update({'Status': 'Removed'});
+                                      } catch (e) {
+                                        print('Error updating document: $e');
+                                      }
+                                    },
+                                    icon: const Icon(Icons.exit_to_app_sharp),
+                                  ),
+                                );
+                              } else {
+                                return const SizedBox();
+                              }
+                            },
+                          ),
                         );
                       }
                     },

@@ -19,7 +19,10 @@ class _PersonalInfoState extends State<PersonalInfo> {
   late TextEditingController _emailController;
   String _selectedClass = '';
   String _selectedBoard = '';
-  String _selectedSubject = '';
+  List<String> classlist = [];
+  List<String> subjectlist = [];
+  List<String> selectedSubjects = [];
+  String dropdownValue = '-Select-';
 
   @override
   void initState() {
@@ -29,8 +32,8 @@ class _PersonalInfoState extends State<PersonalInfo> {
     _courseController = TextEditingController(text: widget.userData['Course']);
     _emailController = TextEditingController(text: widget.userData['email']);
     _selectedClass = widget.userData['Class'] ?? '';
-    _selectedSubject = widget.userData['Subject'] ?? '';
-    _selectedBoard = widget.userData['Board'] ?? '';
+
+    fetchClassList();
   }
 
   @override
@@ -42,6 +45,45 @@ class _PersonalInfoState extends State<PersonalInfo> {
     super.dispose();
   }
 
+  Future<void> fetchClassList() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('Course').get();
+      setState(() {
+        classlist = querySnapshot.docs.map((doc) => doc.id).toList();
+        if (classlist.isNotEmpty) {
+          dropdownValue = classlist.first; // Set default value here
+        }
+      });
+      await fetchSubjectList(dropdownValue);
+    } catch (e) {
+      print('Error fetching class list: $e');
+    }
+  }
+
+  Future<void> fetchSubjectList(String selectedClass) async {
+    try {
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+          .collection('Course')
+          .doc(selectedClass)
+          .get();
+
+      if (docSnapshot.exists && docSnapshot.data() != null) {
+        List<dynamic> subjectData = docSnapshot['Subject'];
+        setState(() {
+          subjectlist = subjectData.map((subject) => subject.toString()).toList();
+        });
+      } else {
+        print('No such document or document is empty!');
+        setState(() {
+          subjectlist = [];
+        });
+      }
+    } catch (e) {
+      print('Error fetching subject list: $e');
+    }
+  }
+
+
   Future<void> _updateUserData() async {
     if (_formKey.currentState!.validate()) {
       try {
@@ -52,7 +94,7 @@ class _PersonalInfoState extends State<PersonalInfo> {
           'email': _emailController.text,
           'Class': _selectedClass,
           'Board': _selectedBoard,
-          'Subject': _selectedSubject,
+          'Subject': selectedSubjects,
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('User data updated successfully')),
@@ -65,23 +107,33 @@ class _PersonalInfoState extends State<PersonalInfo> {
     }
   }
 
+  void _handleSubjectSelection(String value) {
+    setState(() {
+      if (selectedSubjects.contains(value)) {
+        selectedSubjects.remove(value);
+      } else {
+        selectedSubjects.add(value);
+      }
+    });
+  }
+
   Future<void> _showSelectionDialog(String title, List<String> options, void Function(String) onSelect) async {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text(title),
-          content: DropdownButtonFormField<String>(
-            value: options.contains(_selectedBoard) ? _selectedBoard : null,
-            onChanged: (value) {
-              onSelect(value!);
-              Navigator.of(context).pop();
-            },
-            items: options
-                .map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: options.map((value) {
+              return RadioListTile(
+                title: Text(value),
                 value: value,
-                child: Text(value),
+                groupValue: selectedSubjects.contains(value) ? value : null,
+                onChanged: (newValue) {
+                  onSelect(newValue as String);
+                  Navigator.of(context).pop();
+                },
               );
             }).toList(),
           ),
@@ -145,14 +197,11 @@ class _PersonalInfoState extends State<PersonalInfo> {
               ListTile(
                 title: Text('Course: ${_courseController.text}'),
                 onTap: () {
-                  _showSelectionDialog('Select Course', ['Class 11', 'Class 12', 'CA Foundation'], (value) {
+                  _showSelectionDialog('Select Course', classlist, (value) {
                     setState(() {
                       _courseController.text = value;
-                      if (value == 'CA Foundation') {
-                        _selectedClass = 'CA Foundation';
-                        _selectedBoard = '';
-                        _selectedSubject = '';
-                      }
+                      _selectedClass = value;
+                      fetchSubjectList(value);
                     });
                   });
                 },
@@ -169,21 +218,29 @@ class _PersonalInfoState extends State<PersonalInfo> {
                 },
               ),
               const Divider(),
-              ListTile(
-                title: Text('Subject: $_selectedSubject'),
-                onTap: () {
-                  _showSelectionDialog('Select Subject', ['Mathematics', 'Economics', 'Both(Maths & Economics)'], (value) {
-                    setState(() {
-                      _selectedSubject = value;
-                    });
-                  });
-                },
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  const Text('Select Subjects', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    children: subjectlist.map((subject) {
+                      return ChoiceChip(
+                        label: Text(subject),
+                        selected: selectedSubjects.contains(subject),
+                        onSelected: (selected) {
+                          _handleSubjectSelection(subject);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
-              const Divider(),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _updateUserData,
-                child: const Text('Update', style: TextStyle(color: Colors.orangeAccent),),
+                child: const Text('Update', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

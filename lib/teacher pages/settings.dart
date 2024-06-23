@@ -2,10 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:psc/teacher%20pages/attendance.dart';
 import 'package:psc/teacher%20pages/change%20fees.dart';
 import 'package:psc/teacher%20pages/removed%20student.dart';
-import 'package:psc/teacher%20pages/test%20mode.dart';
 
 import '../logIn/log_in.dart';
 import '../theme/theme.dart';
@@ -40,20 +38,6 @@ class Piyush_Settings extends StatelessWidget {
                 TextButton(
                     onPressed: (){
                       Navigator.push(context, MaterialPageRoute(builder: (context) {
-                        return const Attendance();
-                      }));
-                    },
-                    child:const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Attendance",textAlign: TextAlign.left,style: TextStyle(color: Colors.black,fontSize: 18),),
-                        Icon(Icons.arrow_forward_ios,color: Colors.black,),
-                      ],
-                    )
-                ),
-                TextButton(
-                    onPressed: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context) {
                         return const RemovedStudents();
                       }));
                     },
@@ -61,20 +45,6 @@ class Piyush_Settings extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text("Removed Student",textAlign: TextAlign.left,style: TextStyle(color: Colors.black,fontSize: 18),),
-                        Icon(Icons.arrow_forward_ios,color: Colors.black,),
-                      ],
-                    )
-                ),
-                TextButton(
-                    onPressed: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (context) {
-                        return const TestMode();
-                      }));
-                    },
-                    child:const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Test Mode",textAlign: TextAlign.left,style: TextStyle(color: Colors.black,fontSize: 18),),
                         Icon(Icons.arrow_forward_ios,color: Colors.black,),
                       ],
                     )

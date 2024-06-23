@@ -107,63 +107,12 @@ class _FeesState extends State<Fees> {
       case 'Pending':
         return IconButton(
           onPressed: () async {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return StatefulBuilder(
-                  builder: (context, setState) {
-                    return AlertDialog(
-                      title: const Text('Paid via'),
-                      content: DropdownButtonFormField<String>(
-                        value: dropdownValue,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            dropdownValue = newValue!;
-                            modeController.text = dropdownValue;
-                          });
-                        },
-                        items: mode.map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            // Update the user status to 'Waiting'
-                            await FirebaseFirestore.instance
-                                .collection('Fees_due')
-                                .doc(month)
-                                .collection('Users')
-                                .doc(userId)
-                                .update({'Status': 'Waiting'});
-
-                            // Record the payment mode
-                            await FirebaseFirestore.instance
-                                .collection('Fees_due')
-                                .doc(month)
-                                .collection('Users')
-                                .doc(userId)
-                                .update({'Mode': modeController.text.trim()});
-
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text('Add'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            );
+            await FirebaseFirestore.instance
+                .collection('Fees_due')
+                .doc(month)
+                .collection('Users')
+                .doc(userId)
+                .update({'Status': 'Waiting'});
           },
           icon: const Icon(Icons.check),
         );

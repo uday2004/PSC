@@ -20,6 +20,9 @@ class _NotificationPiyushState extends State<NotificationPiyush> {
           icon: const Icon(Icons.arrow_back),
         ),
       ),
+      body: const Center(
+        child: Text('No notification'),
+      ),
     );
   }
 }

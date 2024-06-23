@@ -1,6 +1,8 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -18,19 +20,61 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
   TextEditingController boardController = TextEditingController();
   TextEditingController subjectController = TextEditingController();
 
-  String dropdownValue = list.first;
-  String dropdownValueSubject = listSubject.first;
+  String dropdownValue = '-Select-';
+  String dropdownValueSubject = '-Select-';
   String dropdownValueBoard = listBoard.first;
 
-  static const List<String> list = <String>['-Select-', 'Class 11', 'Class 12', 'CA Foundation'];
+  List<String> classlist = <String>[];
   static const List<String> listBoard = <String>['-Select-', 'ISC', 'CBSE', 'West Bengal'];
-  static const List<String> listSubject = <String>['-Select-', 'Economics', 'Mathematics'];
+  List<String> subjectlist = <String>[];
   bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    courseController.text = dropdownValue;
+    fetchClassList();
+  }
+
+  Future<void> fetchClassList() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance.collection('Course').get();
+      setState(() {
+        classlist = querySnapshot.docs.map((doc) => doc.id).toList();
+        if (classlist.isNotEmpty) {
+          dropdownValue = classlist.first; // Set default value here
+        }
+      });
+      await fetchSubjectList(dropdownValue);
+    } catch (e) {
+      print('Error fetching class list: $e');
+    }
+  }
+
+  Future<void> fetchSubjectList(String selectedClass) async {
+    try {
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+          .collection('Course')
+          .doc(selectedClass)
+          .get();
+
+      if (docSnapshot.exists && docSnapshot.data() != null) {
+        List<dynamic> subjectData = docSnapshot['Subject'];
+        setState(() {
+          subjectlist = subjectData.map((subject) => subject.toString()).toList();
+          dropdownValueSubject = subjectlist.isNotEmpty ? subjectlist.first : '-Select-';
+          subjectController.text = dropdownValueSubject;
+        });
+      } else {
+        log('No such document or document is empty!');
+        setState(() {
+          subjectlist = [];
+          dropdownValueSubject = '-Select-';
+          subjectController.text = dropdownValueSubject;
+        });
+      }
+    } catch (e) {
+      log('Error fetching subject list: $e');
+    }
   }
 
   @override
@@ -56,9 +100,10 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
                   setState(() {
                     dropdownValue = value!;
                     courseController.text = value;
+                    fetchSubjectList(value); // Fetch subjects when course changes
                   });
                 },
-                items: list.map<DropdownMenuItem<String>>((String value) {
+                items: classlist.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
@@ -66,29 +111,29 @@ class _PiyushAssignmentState extends State<PiyushAssignment> {
                 }).toList(),
                 value: dropdownValue,
               ),
-              if(courseController.text == "Class 11" || courseController.text == "Class 12") ...[
-                DropdownButton<String>(
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_downward),
-                  elevation: 16,
-                  underline: Container(
-                    height: 2,
-                    color: Colors.orangeAccent,
-                  ),
-                  onChanged: (String? value) {
-                    setState(() {
-                      dropdownValueSubject = value!;
-                      subjectController.text = value;
-                    });
-                  },
-                  items: listSubject.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  value: dropdownValueSubject,
+              DropdownButton<String>(
+                isExpanded: true,
+                icon: const Icon(Icons.arrow_downward),
+                elevation: 16,
+                underline: Container(
+                  height: 2,
+                  color: Colors.orangeAccent,
                 ),
+                onChanged: (String? value) {
+                  setState(() {
+                    dropdownValueSubject = value!;
+                    subjectController.text = value;
+                  });
+                },
+                items: subjectlist.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                value: dropdownValueSubject,
+              ),
+              if (dropdownValue == 'Class 7' || dropdownValue == 'Class 8' || dropdownValue == 'Class 9' || dropdownValue == 'Class 10' || dropdownValue == 'Class 11' || dropdownValue == 'Class 12') ...[
                 DropdownButton<String>(
                   isExpanded: true,
                   icon: const Icon(Icons.arrow_downward),

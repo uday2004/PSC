@@ -1,4 +1,4 @@
-class UserModel{
+class UserModel {
   final String fName;
   final String lName;
   final String emailID;
@@ -6,9 +6,9 @@ class UserModel{
   final String password;
   final String status;
   final String board;
-  final String subject;
+  final List<String> subject;
 
-  const UserModel({
+  UserModel({
     required this.fName,
     required this.lName,
     required this.emailID,
@@ -17,9 +17,10 @@ class UserModel{
     required this.status,
     required this.board,
     required this.subject,
-});
-  toJson(){
-    return{
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
       "First Name": fName,
       "Last Name": lName,
       "email": emailID,
@@ -28,7 +29,7 @@ class UserModel{
       "Status": "Waiting",
       "password": password,
       "Board": board,
-      "Subject": subject
+      "Subject": subject,
     };
   }
 }
